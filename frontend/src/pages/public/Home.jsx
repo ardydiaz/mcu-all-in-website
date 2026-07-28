@@ -91,7 +91,7 @@ const sites = [
 
 const categories = ["All", "Students", "Academics", "Healthcare", "Corporate"];
 
-function App() {
+function Home() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -354,4 +354,4 @@ function App() {
   );
 }
 
-export default App;
+export default Home;
