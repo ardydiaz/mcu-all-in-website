@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { CategoryController } from "../controllers/CategoryController.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { adminOnly } from "../middleware/roleMiddleware.js";
+import { validate } from "../middleware/validationMiddleware.js";
+import { categoryValidation } from "../validations/category.validation.js";
+const router = Router();
+router.use(authMiddleware);
+router.use(adminOnly);
+router.get("/", CategoryController.index);
+router.post("/", validate(categoryValidation), CategoryController.store);
+export default router;

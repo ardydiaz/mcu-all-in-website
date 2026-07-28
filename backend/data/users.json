@@ -1,0 +1,11 @@
+[
+  {
+    "id": "default-admin",
+    "username": "admin",
+    "name": "MCU Administrator",
+    "email": "admin@mcu.edu.ph",
+    "passwordHash": "a7e0313cd97c25b30ae6b32fc5fe1a52363451d1aa63a1003b5d780fe2a34820",
+    "role": "super_admin",
+    "status": "active"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "category-1",
+    "name": "University",
+    "status": "active"
+  },
+  {
+    "id": "category-2",
+    "name": "Students",
+    "status": "active"
+  },
+  {
+    "id": "category-3",
+    "name": "Academics",
+    "status": "active"
+  },
+  {
+    "id": "category-4",
+    "name": "Healthcare",
+    "status": "active"
+  },
+  {
+    "id": "category-5",
+    "name": "Corporate",
+    "status": "active"
+  },
+  {
+    "id": "category-6",
+    "name": "Community",
+    "status": "active"
+  }
+]

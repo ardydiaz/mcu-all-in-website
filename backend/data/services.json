@@ -1,0 +1,90 @@
+[
+  {
+    "id": "mcu-main",
+    "title": "MCU Main Website",
+    "category": "University",
+    "description": "News, university information, and everything about MCU.",
+    "url": "#",
+    "status": "active",
+    "color": "lime",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "student-portal",
+    "title": "Student Portal",
+    "category": "Students",
+    "description": "Access grades, enrollment, schedules, and student services.",
+    "url": "#",
+    "status": "active",
+    "color": "yellow",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "admissions",
+    "title": "Admissions",
+    "category": "Students",
+    "description": "Explore programs, requirements, and begin your MCU journey.",
+    "url": "#",
+    "status": "active",
+    "color": "cyan",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "mcu-hospital",
+    "title": "MCU Hospital",
+    "category": "Healthcare",
+    "description": "Trusted healthcare services, doctors, and patient resources.",
+    "url": "#",
+    "status": "active",
+    "color": "red",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "learning-management",
+    "title": "Learning Management",
+    "category": "Academics",
+    "description": "Courses, learning materials, assessments, and class updates.",
+    "url": "#",
+    "status": "active",
+    "color": "violet",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "research",
+    "title": "Research & Innovation",
+    "category": "Academics",
+    "description": "Discover MCU research, publications, and innovation programs.",
+    "url": "#",
+    "status": "active",
+    "color": "cyan",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "careers",
+    "title": "Careers at MCU",
+    "category": "Corporate",
+    "description": "Find opportunities and build a meaningful career with us.",
+    "url": "#",
+    "status": "inactive",
+    "color": "orange",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  },
+  {
+    "id": "alumni",
+    "title": "Alumni Network",
+    "category": "Community",
+    "description": "Reconnect, grow your network, and stay part of the community.",
+    "url": "#",
+    "status": "active",
+    "color": "pink",
+    "createdAt": "2026-07-27T00:00:00.000Z",
+    "updatedAt": "2026-07-27T00:00:00.000Z"
+  }
+]
