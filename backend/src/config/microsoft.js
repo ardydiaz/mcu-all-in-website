@@ -6,6 +6,9 @@ const clientSecret = process.env.MS_CLIENT_SECRET || "";
 
 export const microsoftRedirectUri =
   process.env.MS_REDIRECT_URI || "http://localhost:3000/api/auth/microsoft/callback";
+// User.Read is delegated during interactive sign-in and permits reading the
+// signed-in user's own basic profile and profile photo. Do not request an
+// application-wide photo permission for this browser sign-in flow.
 export const microsoftScopes = ["openid", "profile", "email", "User.Read"];
 
 export function getMicrosoftClient() {

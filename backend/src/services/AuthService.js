@@ -1,6 +1,8 @@
 import { UserModel } from "../models/UserModel.js";
 import { signToken } from "../config/jwt.js";
 import { ActivityLogModel } from "../models/ActivityLogModel.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { microsoftPhotoPath, profilePhotoDirectory } from "../helpers/profilePhoto.js";
 
 async function getMicrosoftProfile(accessToken) {
   const response = await fetch(
@@ -19,6 +21,21 @@ async function getMicrosoftProfile(accessToken) {
     fullname: graphUser.displayName,
     department: graphUser.department || null,
   };
+}
+
+async function cacheMicrosoftProfilePhoto(accessToken, microsoftId) {
+  try {
+    const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return;
+    const photo = Buffer.from(await response.arrayBuffer());
+    if (!photo.length || photo.length > 5 * 1024 * 1024) return;
+    await mkdir(profilePhotoDirectory, { recursive: true });
+    await writeFile(microsoftPhotoPath(microsoftId), photo);
+  } catch {
+    // A missing photo or tenant permission must never prevent a successful sign-in.
+  }
 }
 
 export const AuthService = {
@@ -46,6 +63,8 @@ export const AuthService = {
       error.status = 403;
       throw error;
     }
+
+    await cacheMicrosoftProfilePhoto(accessToken, profile.id);
 
     const token = signToken({
       sub: String(user.id),

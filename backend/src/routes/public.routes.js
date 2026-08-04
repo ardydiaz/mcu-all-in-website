@@ -5,6 +5,7 @@ import { subscribeToDirectoryEvents } from "../helpers/directoryEvents.js";
 const router = Router();
 router.get("/systems", PublicController.systems);
 router.get("/categories", PublicController.categories);
+router.get("/announcements", PublicController.announcements);
 router.get("/events", (request, response) => {
   response.set({
     "Content-Type": "text/event-stream",

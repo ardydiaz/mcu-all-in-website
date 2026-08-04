@@ -10,4 +10,5 @@ router.get("/auth/microsoft/callback", AuthController.microsoftCallback);
 router.post("/login", validate(loginValidation), AuthController.localLogin);
 router.post("/logout", AuthController.logout);
 router.get("/me", authMiddleware, AuthController.me);
+router.get("/me/photo", authMiddleware, AuthController.profilePhoto);
 export default router;

@@ -28,6 +28,22 @@ export const swaggerDocument = {
           color: { type: "string", example: "violet" },
         },
       },
+      Announcement: {
+        type: "object",
+        required: ["title", "content"],
+        properties: {
+          id: { type: "integer", example: 1 },
+          title: { type: "string", example: "Enrollment advisory" },
+          content: { type: "string", example: "Enrollment for the next term is now open." },
+          excerpt: { type: "string", example: "Enrollment is now open." },
+          linkUrl: { type: "string", example: "https://mcu.edu.ph/admissions" },
+          audience: { type: "string", enum: ["all", "students", "faculty", "administrators"] },
+          status: { type: "string", enum: ["draft", "published", "archived"] },
+          isFeatured: { type: "boolean", example: false },
+          startsAt: { type: "string", format: "date-time", nullable: true },
+          endsAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
     },
   },
   paths: {
@@ -79,6 +95,9 @@ export const swaggerDocument = {
     "/public/categories": {
       get: { tags: ["Public Directory"], summary: "List active public categories", responses: responses("Active categories") },
     },
+    "/public/announcements": {
+      get: { tags: ["Public Directory"], summary: "List active published public announcements", responses: responses("Published announcements") },
+    },
     "/dashboard": {
       get: { tags: ["Dashboard"], summary: "Get dashboard metrics and activity", security: bearerAuth, responses: { 200: { description: "Dashboard summary" }, 401: { description: "Authentication required" }, 403: { description: "Administrator role required" } } },
     },
@@ -121,6 +140,19 @@ export const swaggerDocument = {
     "/categories": {
       get: { tags: ["Categories"], summary: "List categories", security: bearerAuth, responses: responses("Categories") },
       post: { tags: ["Categories"], summary: "Create a category", security: bearerAuth, responses: { 201: { description: "Created" } } },
+    },
+    "/announcements": {
+      get: { tags: ["Announcements"], summary: "List announcements", security: bearerAuth, responses: responses("Announcements") },
+      post: { tags: ["Announcements"], summary: "Create an announcement", security: bearerAuth, requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Announcement" } } } }, responses: { 201: { description: "Created" }, 422: { description: "Validation failed" } } },
+    },
+    "/announcements/{id}": {
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+      get: { tags: ["Announcements"], summary: "Get an announcement", security: bearerAuth, responses: responses("Announcement") },
+      put: { tags: ["Announcements"], summary: "Update an announcement", security: bearerAuth, requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Announcement" } } } }, responses: responses("Updated") },
+      delete: { tags: ["Announcements"], summary: "Soft delete an announcement", security: bearerAuth, responses: { 204: { description: "Soft deleted" } } },
+    },
+    "/announcements/{id}/restore": {
+      patch: { tags: ["Announcements"], summary: "Restore a soft-deleted announcement", security: bearerAuth, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: responses("Restored") },
     },
   },
 };

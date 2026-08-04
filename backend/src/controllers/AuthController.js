@@ -7,6 +7,8 @@ import {
   microsoftScopes,
 } from "../config/microsoft.js";
 import { signToken } from "../config/jwt.js";
+import { access } from "node:fs/promises";
+import { microsoftPhotoPath } from "../helpers/profilePhoto.js";
 
 const stateCookie = "mcu_oauth_state";
 const returnCookie = "mcu_oauth_return";
@@ -119,6 +121,17 @@ export const AuthController = {
   },
 
   me(request, response) {
-    response.json({ user: request.user });
+    response.json({ user: { ...request.user, avatarUrl: request.user.microsoftId ? "/api/me/photo" : null } });
+  },
+
+  async profilePhoto(request, response) {
+    if (!request.user.microsoftId) return response.status(404).json({ message: "No Microsoft profile photo is available." });
+    const photoPath = microsoftPhotoPath(request.user.microsoftId);
+    try {
+      await access(photoPath);
+      return response.type("image/jpeg").sendFile(photoPath);
+    } catch {
+      return response.status(404).json({ message: "No Microsoft profile photo is available." });
+    }
   },
 };

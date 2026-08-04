@@ -9,6 +9,7 @@ import rolesRoutes from "./roles.routes.js";
 import analyticsRoutes from "./analytics.routes.js";
 import uploadsRoutes from "./uploads.routes.js";
 import publicRoutes from "./public.routes.js";
+import notificationsRoutes from "./notifications.routes.js";
 
 const router = Router();
 router.get("/health", (_request, response) => response.json({
@@ -25,4 +26,5 @@ router.use("/announcements", announcementsRoutes);
 router.use("/roles", rolesRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/uploads", uploadsRoutes);
+router.use("/notifications", notificationsRoutes);
 export default router;
