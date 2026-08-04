@@ -1,9 +1,24 @@
-import { readCollection, writeCollection } from "../config/database.js";
+import { randomUUID } from "node:crypto";
+import { isDatabaseEnabled, query, readCollection, writeCollection } from "../config/database.js";
 
-const defaults = ["University", "Students", "Academics", "Healthcare", "Corporate", "Community"]
-  .map((name, index) => ({ id: `category-${index + 1}`, name, status: "active" }));
+const defaults = ["University", "Students", "Academics", "Healthcare", "Corporate", "Community"].map((name, index) => ({ id: `category-${index + 1}`, name, status: "active", deletedAt: null, deletedBy: null }));
+const slugify = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "category";
+const selectCategories = "SELECT id, name, slug, description, color, icon, display_order AS displayOrder, status, created_at AS createdAt, updated_at AS updatedAt, deleted_at AS deletedAt, deleted_by AS deletedBy FROM categories";
+
+const jsonModel = {
+  async all({ includeDeleted = false } = {}) { const items = await readCollection("categories", defaults); return includeDeleted ? items : items.filter((item) => !item.deletedAt); },
+  async findById(id) { return (await this.all({ includeDeleted: true })).find((item) => String(item.id) === String(id)) || null; },
+  async create(payload) { const items = await this.all({ includeDeleted: true }); const item = { id: randomUUID(), name: String(payload.name).trim(), status: payload.status === "inactive" ? "inactive" : "active", deletedAt: null, deletedBy: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; items.push(item); await writeCollection("categories", items); return item; },
+  async update(id, payload) { const items = await this.all({ includeDeleted: true }); const index = items.findIndex((item) => String(item.id) === String(id)); if (index < 0) return null; items[index] = { ...items[index], name: String(payload.name ?? items[index].name).trim(), status: payload.status === "inactive" ? "inactive" : "active", updatedAt: new Date().toISOString() }; await writeCollection("categories", items); return items[index]; },
+  async softDelete(id, actor) { const items = await this.all({ includeDeleted: true }); const index = items.findIndex((item) => String(item.id) === String(id)); if (index < 0 || items[index].deletedAt) return null; items[index] = { ...items[index], status: "inactive", deletedAt: new Date().toISOString(), deletedBy: actor, updatedAt: new Date().toISOString() }; await writeCollection("categories", items); return items[index]; },
+  async restore(id) { const items = await this.all({ includeDeleted: true }); const index = items.findIndex((item) => String(item.id) === String(id)); if (index < 0 || !items[index].deletedAt) return null; items[index] = { ...items[index], status: "active", deletedAt: null, deletedBy: null, updatedAt: new Date().toISOString() }; await writeCollection("categories", items); return items[index]; },
+};
 
 export const CategoryModel = {
-  all: () => readCollection("categories", defaults),
-  saveAll: (items) => writeCollection("categories", items),
+  async all({ includeDeleted = false } = {}) { if (!isDatabaseEnabled()) return jsonModel.all({ includeDeleted }); return query(`${selectCategories} ${includeDeleted ? "" : "WHERE deleted_at IS NULL"} ORDER BY display_order, name`); },
+  async findById(id) { if (!isDatabaseEnabled()) return jsonModel.findById(id); const rows = await query(`${selectCategories} WHERE id = ? LIMIT 1`, [id]); return rows[0] || null; },
+  async create(payload) { if (!isDatabaseEnabled()) return jsonModel.create(payload); const name = String(payload.name).trim(); const result = await query("INSERT INTO categories (name, slug, status) VALUES (?, ?, ?)", [name, `${slugify(name)}-${Date.now()}`, payload.status === "inactive" ? "inactive" : "active"]); return this.findById(result.insertId); },
+  async update(id, payload) { if (!isDatabaseEnabled()) return jsonModel.update(id, payload); const current = await this.findById(id); if (!current || current.deletedAt) return null; const name = String(payload.name ?? current.name).trim(); const status = payload.status === "inactive" ? "inactive" : "active"; await query("UPDATE categories SET name = ?, status = ? WHERE id = ?", [name, status, id]); return this.findById(id); },
+  async softDelete(id, actor = null) { if (!isDatabaseEnabled()) return jsonModel.softDelete(id, actor); const current = await this.findById(id); if (!current || current.deletedAt) return null; await query("UPDATE categories SET status = 'inactive', deleted_at = CURRENT_TIMESTAMP, deleted_by = NULL WHERE id = ?", [id]); return this.findById(id); },
+  async restore(id) { if (!isDatabaseEnabled()) return jsonModel.restore(id); const current = await this.findById(id); if (!current || !current.deletedAt) return null; await query("UPDATE categories SET status = 'active', deleted_at = NULL, deleted_by = NULL WHERE id = ?", [id]); return this.findById(id); },
 };

@@ -1,4 +1,5 @@
 import express from "express";
+import swaggerUi from "swagger-ui-express";
 import apiRoutes from "./routes/index.js";
 import { corsConfig } from "./config/cors.js";
 import { swaggerDocument } from "./config/swagger.js";
@@ -19,7 +20,11 @@ app.get("/", (_request, response) => response.json({
   health: "/api/health",
   documentation: "/api/docs",
 }));
-app.get("/api/docs", (_request, response) => response.json(swaggerDocument));
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customSiteTitle: "MCU All-in-One API Docs",
+  swaggerOptions: { persistAuthorization: true },
+}));
+app.get("/api/openapi.json", (_request, response) => response.json(swaggerDocument));
 app.use("/api", apiRoutes);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

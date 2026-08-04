@@ -9,4 +9,7 @@ router.use(authMiddleware);
 router.use(adminOnly);
 router.get("/", CategoryController.index);
 router.post("/", validate(categoryValidation), CategoryController.store);
+router.put("/:id", validate(categoryValidation), CategoryController.update);
+router.delete("/:id", CategoryController.destroy);
+router.patch("/:id/restore", CategoryController.restore);
 export default router;

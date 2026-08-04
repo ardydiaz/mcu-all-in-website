@@ -4,5 +4,11 @@ export function notFoundMiddleware(request, response) {
 }
 export function errorMiddleware(error, _request, response, _next) {
   logger.error(error.stack || error.message);
-  response.status(error.status || 500).json({ message: error.status ? error.message : "An unexpected server error occurred." });
+  const status = error.status || 500;
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  response.status(status).json({
+    message: error.status || isDevelopment
+      ? error.message
+      : "An unexpected server error occurred.",
+  });
 }

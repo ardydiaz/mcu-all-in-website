@@ -14,4 +14,5 @@ router.get("/:id", SystemController.show);
 router.put("/:id", validate(systemValidation), SystemController.update);
 router.patch("/:id/status", SystemController.status);
 router.delete("/:id", SystemController.destroy);
+router.patch("/:id/restore", SystemController.restore);
 export default router;

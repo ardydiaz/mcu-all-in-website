@@ -38,6 +38,15 @@ contains a standard Bearer JWT with the Super Admin role. This endpoint
 returns `404` when `NODE_ENV=production`; production authentication remains
 Microsoft-only.
 
+## API documentation (Swagger)
+
+With the API running, open `http://localhost:3000/api/docs` for the interactive
+Swagger UI. The OpenAPI document is also available at
+`http://localhost:3000/api/openapi.json`.
+
+To test protected endpoints, first call `POST /api/login` in development,
+copy the returned `token`, select **Authorize** in Swagger, and paste the JWT.
+
 ## Main endpoints
 
 - `GET /api/auth/microsoft`

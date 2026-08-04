@@ -69,10 +69,13 @@ export const AuthController = {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const isAdmin = ["super_admin", "administrator"].includes(authentication.user.role);
     const requestedReturn = requestCookies[returnCookie];
-    const destination = isAdmin
-      ? (requestedReturn?.startsWith("/admin") ? requestedReturn : "/admin")
-      : "/";
-    response.redirect(`${clientUrl}${destination}`);
+    const safeReturn = requestedReturn?.startsWith("/") ? requestedReturn : null;
+    const adminAccessDenied = !isAdmin && safeReturn?.startsWith("/admin");
+    const destination = isAdmin ? (safeReturn || "/admin") : (safeReturn || "/");
+    const loginHandoff = new URL("/login", clientUrl);
+    loginHandoff.searchParams.set("microsoftLogin", adminAccessDenied ? "approvalRequired" : "success");
+    if (!adminAccessDenied) loginHandoff.searchParams.set("next", destination);
+    response.redirect(loginHandoff.toString());
   },
 
   localLogin(request, response) {

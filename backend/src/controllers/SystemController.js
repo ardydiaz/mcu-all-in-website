@@ -1,7 +1,11 @@
 import { SystemService } from "../services/SystemService.js";
 
 export const SystemController = {
-  async index(_request, response) { response.json(await SystemService.list()); },
+  async index(request, response) { response.json(await SystemService.list({ includeDeleted: request.query.includeDeleted === "true" })); },
+  async publicIndex(_request, response) {
+    const systems = await SystemService.list();
+    response.json(systems.filter((item) => item.status === "active"));
+  },
   async show(request, response) {
     const item = await SystemService.get(request.params.id);
     item ? response.json(item) : response.status(404).json({ message: "System not found." });
@@ -20,5 +24,9 @@ export const SystemController = {
     (await SystemService.remove(request.params.id, request.user.username))
       ? response.status(204).end()
       : response.status(404).json({ message: "System not found." });
+  },
+  async restore(request, response) {
+    const item = await SystemService.restore(request.params.id, request.user.username || request.user.email);
+    item ? response.json(item) : response.status(404).json({ message: "Deleted system not found." });
   },
 };

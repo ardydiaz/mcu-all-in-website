@@ -8,6 +8,8 @@ export const projectRoot = path.resolve(srcDirectory, "../..");
 export const dataDirectory = path.join(projectRoot, "data");
 let pool;
 
+export const isDatabaseEnabled = () => process.env.DB_ENABLED === "true";
+
 export function getDatabase() {
   if (!pool) {
     pool = mysql.createPool({
@@ -47,7 +49,7 @@ export async function writeCollection(name, value) {
 
 export async function connectDatabase() {
   await mkdir(dataDirectory, { recursive: true });
-  if (process.env.DB_ENABLED === "true") {
+  if (isDatabaseEnabled()) {
     await query("SELECT 1");
     return { driver: "mysql", database: process.env.DB_NAME || "mcu_all_in_one" };
   }
