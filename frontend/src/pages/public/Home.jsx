@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  Bell,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -10,12 +11,14 @@ import {
   ExternalLink,
   GraduationCap,
   HeartPulse,
+  House,
   Landmark,
   LibraryBig,
   Mail,
   Menu,
   Microscope,
   LockKeyhole,
+  Megaphone,
   Search,
   ShieldCheck,
   Sparkles,
@@ -42,8 +45,30 @@ const tonesByColor = {
   pink: "pink",
 };
 
+function ExternalLinkAction() {
+  return <span className="external-link-action" aria-hidden="true"><ExternalLink size={20} /></span>;
+}
+
+function greetingForManila() {
+  const hour = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    hourCycle: "h23",
+  }).format(new Date()));
+  if (hour < 5) return "Good evening,";
+  if (hour < 12) return "Good morning,";
+  if (hour < 18) return "Good afternoon,";
+  return "Good evening,";
+}
+
+function formatAnnouncementDate(value) {
+  if (!value) return "Just now";
+  return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+}
+
 function Home() {
   const [query, setQuery] = useState("");
+  const [quickQuery, setQuickQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -52,6 +77,49 @@ function Home() {
   const [categories, setCategories] = useState(["All"]);
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [typedPrompt, setTypedPrompt] = useState("");
+  const [avatarImageFailed, setAvatarImageFailed] = useState(false);
+  const [avatarTone] = useState(() => ["violet", "cyan", "pink", "orange", "lime"][Math.floor(Math.random() * 5)]);
+  const [avatarIndex] = useState(() => Math.floor(Math.random() * 20));
+  const [greeting, setGreeting] = useState(greetingForManila);
+  const [announcements, setAnnouncements] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+
+  useEffect(() => setAvatarImageFailed(false), [currentUser?.avatarUrl]);
+
+  useEffect(() => {
+    const updateGreeting = () => setGreeting(greetingForManila());
+    updateGreeting();
+    const timer = window.setInterval(updateGreeting, 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const loadAnnouncements = useCallback(() => {
+    fetch("/api/notifications")
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((result) => {
+        if (result?.announcements) setAnnouncements(result.announcements);
+        else return fetch("/api/public/announcements").then((response) => response.ok ? response.json() : []).then((items) => setAnnouncements(Array.isArray(items) ? items.map((item) => ({ ...item, isRead: false })) : []));
+      })
+      .catch(() => setAnnouncements([]));
+  }, []);
+
+  useEffect(() => {
+    loadAnnouncements();
+    const refresh = window.setInterval(loadAnnouncements, 12000);
+    return () => window.clearInterval(refresh);
+  }, [loadAnnouncements]);
+
+  const unreadAnnouncements = announcements.filter((item) => !item.isRead);
+  const toggleNotifications = () => setNotificationsOpen((open) => !open);
+  const openAnnouncement = (announcement) => {
+    if (!announcement.isRead) fetch(`/api/notifications/${announcement.id}/read`, { method: "POST" }).catch(() => {});
+    setAnnouncements((items) => items.map((item) => item.id === announcement.id ? { ...item, isRead: true } : item));
+    setSelectedAnnouncement(announcement);
+    setNotificationsOpen(false);
+  };
 
   useEffect(() => {
     fetch("/api/me")
@@ -65,6 +133,24 @@ function Home() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const prompt = "What would you like to do today?";
+    let timeout;
+    const typePrompt = () => {
+      let index = 0;
+      setTypedPrompt("");
+      const typeNextCharacter = () => {
+        index += 1;
+        setTypedPrompt(prompt.slice(0, index));
+        if (index < prompt.length) timeout = window.setTimeout(typeNextCharacter, 42);
+        else timeout = window.setTimeout(typePrompt, 5000);
+      };
+      timeout = window.setTimeout(typeNextCharacter, 42);
+    };
+    typePrompt();
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const loadDirectory = useCallback(() => {
@@ -91,18 +177,20 @@ function Home() {
   useEffect(() => {
     loadDirectory();
     const events = new EventSource("/api/public/events");
-    events.addEventListener("directory-updated", loadDirectory);
+    const refreshPublicData = () => { loadDirectory(); loadAnnouncements(); };
+    events.addEventListener("directory-updated", refreshPublicData);
     const refreshWhenVisible = () => { if (document.visibilityState === "visible") loadDirectory(); };
     const refreshInterval = window.setInterval(loadDirectory, 12000);
     window.addEventListener("focus", loadDirectory);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      events.removeEventListener("directory-updated", refreshPublicData);
       events.close();
       window.clearInterval(refreshInterval);
       window.removeEventListener("focus", loadDirectory);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [loadDirectory]);
+  }, [loadDirectory, loadAnnouncements]);
 
   const filteredSites = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
@@ -117,8 +205,20 @@ function Home() {
     });
   }, [sites, category, query]);
 
+  const quickSites = useMemo(() => {
+    const normalizedQuery = quickQuery.toLowerCase().trim();
+    if (!normalizedQuery) return sites;
+    return sites.filter((site) => `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery));
+  }, [sites, quickQuery]);
+
   const scrollToDirectory = () => {
     document.getElementById("directory")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const showAllServices = () => {
+    setQuery("");
+    setCategory("All");
+    setDirectoryOpen(true);
   };
 
   const openService = (event, site) => {
@@ -137,6 +237,31 @@ function Home() {
   };
 
   return (
+    <>
+    <div className="mobile-app-shell">
+      <header className="mobile-app-header"><a className="mobile-app-brand" href="#"><span><Building2 size={20} /></span><strong>MCU <small>ALL-IN-ONE</small></strong></a><div className="notification-control"><button aria-label="Announcements" aria-expanded={notificationsOpen} onClick={toggleNotifications}><Bell size={22} />{unreadAnnouncements.length > 0 && <i>{unreadAnnouncements.length > 9 ? "9+" : unreadAnnouncements.length}</i>}</button>{notificationsOpen && <section className="announcement-menu" aria-label="Announcements"><div className="announcement-menu-head"><div><strong>Notifications</strong><small>{announcements.length ? `${announcements.length} announcement${announcements.length === 1 ? "" : "s"}` : "You are up to date"}</small></div><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={18} /></button></div><div className="announcement-menu-list">{announcements.length ? announcements.map((announcement) => <button className={announcement.isRead ? "" : "unread"} key={announcement.id} onClick={() => openAnnouncement(announcement)}><span><Megaphone size={17} /></span><div><strong>{announcement.title}</strong><small>{announcement.excerpt || "Read the latest MCU announcement."}</small></div></button>) : <p><Bell size={20} />No new announcements.</p>}</div></section>}</div></header>
+      {selectedAnnouncement && <div className="announcement-detail-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedAnnouncement(null)}><article className="announcement-detail-modal"><button className="announcement-detail-close" onClick={() => setSelectedAnnouncement(null)} aria-label="Close announcement"><X size={20} /></button><span className="announcement-detail-icon"><Megaphone size={22} /></span><small>MCU ANNOUNCEMENT · {formatAnnouncementDate(selectedAnnouncement.publishedAt || selectedAnnouncement.createdAt)}</small><h2>{selectedAnnouncement.title}</h2>{selectedAnnouncement.excerpt && <p className="announcement-detail-excerpt">{selectedAnnouncement.excerpt}</p>}<p className="announcement-detail-content">{selectedAnnouncement.content}</p>{selectedAnnouncement.linkUrl && <a href={selectedAnnouncement.linkUrl} target="_blank" rel="noreferrer">Open related link <ExternalLink size={17} /></a>}</article></div>}
+      <main className="mobile-app-content">
+        <div className="mcu-profile-avatar-slot">
+          <span className={`mcu-profile-avatar ${avatarTone} ${!currentUser?.avatarUrl || avatarImageFailed ? "is-fallback" : ""}`} style={{ "--avatar-x": `${(avatarIndex % 5) * 25}%`, "--avatar-y": `${Math.floor(avatarIndex / 5) * (100 / 3)}%` }}>
+            {currentUser?.avatarUrl && !avatarImageFailed ? <img src={currentUser.avatarUrl} alt="Your Microsoft profile" onError={() => setAvatarImageFailed(true)} /> : <span className="mcu-illustrated-avatar" aria-label="Illustrated profile avatar" role="img" />}
+          </span>
+        </div>
+        <section className="mobile-greeting"><p>{greeting}</p><h1>{currentUser?.fullname?.split(" ")[0] || currentUser?.name?.split(" ")[0] || "MCU Guest"} <span>👋</span></h1><small className="typewriter-prompt">{typedPrompt}<i /></small></section>
+        <label className="mobile-service-search"><Search size={20} /><input value={quickQuery} onChange={(event) => setQuickQuery(event.target.value)} placeholder="Search Quick Access..." /></label>
+        <section className="mobile-section"><div className="mobile-section-title"><h2>Quick Access</h2><button onClick={showAllServices}>View all</button></div><div className="mobile-quick-grid">{quickSites.slice(0, 6).map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><small>{site.title}</small></button>; })}</div></section>
+        <section className="mobile-section"><div className="mobile-section-title"><h2>Recently added</h2><button onClick={showAllServices}>View all</button></div><div className="mobile-recent-list">{quickSites.slice(0, 3).map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={19} /></span><div><strong>{site.title}</strong><small>{site.description}</small></div><ExternalLinkAction /></button>; })}</div></section>
+      </main>
+      <section className="desktop-app-directory">
+        <div className="desktop-directory-title"><div><span className="section-kicker"><i /> LIVE MCU DIRECTORY</span><h2>Directory</h2></div></div>
+        <label className="desktop-directory-search"><Search size={20} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label>
+        <div className="desktop-directory-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
+        <div className="desktop-directory-label"><strong>{category === "All" ? "All services" : category}</strong><span>{filteredSites.length} services</span></div>
+        <div className="desktop-directory-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={24} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}{!catalogLoading && !filteredSites.length && <p className="desktop-directory-empty">No matching services found.</p>}</div>
+      </section>
+      {directoryOpen && <div className="service-directory-overlay" onMouseDown={(event) => event.target === event.currentTarget && setDirectoryOpen(false)}><section className="service-directory-modal"><div className="service-directory-modal-head"><div><span className="section-kicker"><i /> MCU DIGITAL ECOSYSTEM</span><h2>All services</h2><p>{filteredSites.length} connected MCU services</p></div><button onClick={() => setDirectoryOpen(false)} aria-label="Close directory"><X size={22} /></button></div><label className="service-directory-modal-search"><Search size={20} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label><div className="service-directory-modal-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="service-directory-modal-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}</div></section></div>}
+      <nav className="mobile-bottom-nav"><button className="active"><House size={20} />Home</button><button onClick={showAllServices}><Search size={20} />Directory</button><a href="/login"><ShieldCheck size={20} />Sign in</a></nav>
+    </div>
     <div className="app">
       <header className="site-header">
         <a className="brand" href="#" aria-label="MCU All-in-One home">
@@ -404,6 +529,7 @@ function Home() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

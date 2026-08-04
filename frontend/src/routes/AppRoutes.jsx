@@ -20,6 +20,7 @@ import Categories from "../pages/admin/Categories";
 import AdminSystems from "../pages/admin/Systems";
 import Analytics from "../pages/admin/Analytics";
 import Settings from "../pages/admin/Settings";
+import Announcements from "../pages/admin/Announcements";
 
 function AppRoutes() {
   return (
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/admin/systems" element={<AdminSystems />} />
           <Route path="/admin/analytics" element={<Analytics />} />
           <Route path="/admin/settings" element={<Settings />} />
+          <Route path="/admin/announcements" element={<Announcements />} />
         </Route>
       </Routes>
     </BrowserRouter>

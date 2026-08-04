@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, Layers3, LogOut, Settings, Tags, Users } from "lucide-react";
+import { BarChart3, Layers3, LogOut, Megaphone, Settings, Tags, Users } from "lucide-react";
 import adminStylesUrl from "../styles/admin.css?url";
 import { adminApi } from "../services/adminApi";
 
@@ -8,6 +8,7 @@ const navItems = [
   [Layers3, "Web services", "/admin/systems"],
   [Users, "Administrators", "/admin/users"],
   [Tags, "Categories", "/admin/categories"],
+  [Megaphone, "Announcements", "/admin/announcements"],
   [BarChart3, "Analytics", "/admin/analytics"],
 ];
 

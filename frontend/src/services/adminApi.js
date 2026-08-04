@@ -42,4 +42,7 @@ export const adminApi = {
   updateService: (id, service) => request(`/api/services/${id}`, { method: "PUT", body: JSON.stringify(service) }),
   updateStatus: (id, status) => request(`/api/services/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   deleteService: (id) => request(`/api/services/${id}`, { method: "DELETE" }),
+  getAnnouncements: () => request("/api/announcements"),
+  createAnnouncement: (announcement) => request("/api/announcements", { method: "POST", body: JSON.stringify(announcement) }),
+  deleteAnnouncement: (id) => request(`/api/announcements/${id}`, { method: "DELETE" }),
 };
