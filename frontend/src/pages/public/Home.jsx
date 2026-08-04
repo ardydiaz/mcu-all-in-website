@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -15,6 +15,7 @@ import {
   Mail,
   Menu,
   Microscope,
+  LockKeyhole,
   Search,
   ShieldCheck,
   Sparkles,
@@ -22,79 +23,86 @@ import {
   X,
 } from "lucide-react";
 
-const sites = [
-  {
-    title: "MCU Main Website",
-    description: "News, university information, and everything about MCU.",
-    category: "University",
-    icon: Landmark,
-    tone: "green",
-    href: "#",
-  },
-  {
-    title: "Student Portal",
-    description: "Access grades, enrollment, schedules, and student services.",
-    category: "Students",
-    icon: GraduationCap,
-    tone: "gold",
-    href: "#",
-  },
-  {
-    title: "Admissions",
-    description: "Explore programs, requirements, and begin your MCU journey.",
-    category: "Students",
-    icon: BookOpen,
-    tone: "blue",
-    href: "#",
-  },
-  {
-    title: "MCU Hospital",
-    description: "Trusted healthcare services, doctors, and patient resources.",
-    category: "Healthcare",
-    icon: HeartPulse,
-    tone: "red",
-    href: "#",
-  },
-  {
-    title: "Learning Management",
-    description: "Courses, learning materials, assessments, and class updates.",
-    category: "Academics",
-    icon: LibraryBig,
-    tone: "purple",
-    href: "#",
-  },
-  {
-    title: "Research & Innovation",
-    description: "Discover MCU research, publications, and innovation programs.",
-    category: "Academics",
-    icon: Microscope,
-    tone: "cyan",
-    href: "#",
-  },
-  {
-    title: "Careers at MCU",
-    description: "Find opportunities and build a meaningful career with us.",
-    category: "Corporate",
-    icon: BriefcaseBusiness,
-    tone: "orange",
-    href: "#",
-  },
-  {
-    title: "Alumni Network",
-    description: "Reconnect, grow your network, and stay part of the community.",
-    category: "Community",
-    icon: Users,
-    tone: "pink",
-    href: "#",
-  },
-];
+const iconsByCategory = {
+  University: Landmark,
+  Students: GraduationCap,
+  Academics: LibraryBig,
+  Healthcare: HeartPulse,
+  Corporate: BriefcaseBusiness,
+  Community: Users,
+};
 
-const categories = ["All", "Students", "Academics", "Healthcare", "Corporate"];
+const tonesByColor = {
+  lime: "green",
+  yellow: "gold",
+  cyan: "cyan",
+  red: "red",
+  violet: "purple",
+  orange: "orange",
+  pink: "pink",
+};
 
 function Home() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginModal, setLoginModal] = useState(null);
+  const [sites, setSites] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => {
+        setCurrentUser(result?.user || null);
+        const pendingService = sessionStorage.getItem("mcu_pending_service");
+        if (result?.user && pendingService && pendingService !== "#") {
+          sessionStorage.removeItem("mcu_pending_service");
+          window.location.assign(pendingService);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const loadDirectory = useCallback(() => {
+    setCatalogError("");
+    Promise.all([fetch("/api/public/systems"), fetch("/api/public/categories")])
+      .then(async ([systemsResponse, categoriesResponse]) => {
+        if (!systemsResponse.ok || !categoriesResponse.ok) throw new Error("Unable to load MCU services.");
+        const [systems, apiCategories] = await Promise.all([systemsResponse.json(), categoriesResponse.json()]);
+        setSites(systems.map((system) => ({
+          ...system,
+          title: system.title || system.name,
+          href: system.url,
+          tone: tonesByColor[system.color] || "purple",
+          icon: iconsByCategory[system.category] || BookOpen,
+        }))); 
+        const nextCategories = ["All", ...apiCategories.map((item) => item.name)];
+        setCategories(nextCategories);
+        setCategory((current) => nextCategories.includes(current) ? current : "All");
+      })
+      .catch((error) => setCatalogError(error.message))
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadDirectory();
+    const events = new EventSource("/api/public/events");
+    events.addEventListener("directory-updated", loadDirectory);
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") loadDirectory(); };
+    const refreshInterval = window.setInterval(loadDirectory, 12000);
+    window.addEventListener("focus", loadDirectory);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      events.close();
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", loadDirectory);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [loadDirectory]);
 
   const filteredSites = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
@@ -107,10 +115,25 @@ function Home() {
           .includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
-  }, [category, query]);
+  }, [sites, category, query]);
 
   const scrollToDirectory = () => {
     document.getElementById("directory")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const openService = (event, site) => {
+    event.preventDefault();
+    if (currentUser) {
+      if (site.href !== "#") window.location.assign(site.href);
+      return;
+    }
+    setLoginModal(site);
+  };
+
+  const continueWithMicrosoft = () => {
+    if (!loginModal) return;
+    sessionStorage.setItem("mcu_pending_service", loginModal.href);
+    window.location.href = "/api/auth/microsoft?returnTo=/";
   };
 
   return (
@@ -133,9 +156,9 @@ function Home() {
           <a href="#support">Support</a>
         </nav>
 
-        <a className="contact-button" href="mailto:info@mcu.edu.ph">
-          <Mail size={17} />
-          Contact us
+        <a className="contact-button" href="/login">
+          <ShieldCheck size={17} />
+          Sign in
         </a>
 
         <button
@@ -259,7 +282,7 @@ function Home() {
               ))}
             </div>
             <span className="result-count">
-              <strong>{filteredSites.length}</strong> connected services
+              <strong>{catalogLoading && sites.length === 0 ? "—" : filteredSites.length}</strong> connected services
             </span>
           </div>
 
@@ -272,6 +295,7 @@ function Home() {
                   href={site.href}
                   key={site.title}
                   style={{ "--card-index": index }}
+                  onClick={(event) => openService(event, site)}
                 >
                   <span className="card-accent" aria-hidden="true" />
                   <div className="card-top">
@@ -292,14 +316,20 @@ function Home() {
             })}
           </div>
 
-          {filteredSites.length === 0 && (
+          {catalogLoading && sites.length === 0 && (
+            <div className="empty-state directory-loading" role="status">
+              <span className="directory-loader" />
+              <h3>Loading MCU services</h3>
+              <p>Connecting to the digital ecosystem…</p>
+            </div>
+          )}
+
+          {!catalogLoading && filteredSites.length === 0 && (
             <div className="empty-state">
               <Search size={28} />
-              <h3>No services found</h3>
-              <p>Try a different search term or category.</p>
-              <button onClick={() => { setQuery(""); setCategory("All"); }}>
-                Clear filters
-              </button>
+              <h3>{catalogError ? "Services are unavailable" : "No services found"}</h3>
+              <p>{catalogError || "Try a different search term or category."}</p>
+              {!catalogError && <button onClick={() => { setQuery(""); setCategory("All"); }}>Clear filters</button>}
             </div>
           )}
         </section>
@@ -350,6 +380,29 @@ function Home() {
           <a href="#">Accessibility</a>
         </div>
       </footer>
+
+      {loginModal && (
+        <div className="service-login-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setLoginModal(null)}>
+          <section className="service-login-modal" role="dialog" aria-modal="true" aria-labelledby="service-login-title">
+            <button className="service-login-close" onClick={() => setLoginModal(null)} aria-label="Close login dialog">
+              <X size={19} />
+            </button>
+            <span className="service-lock"><LockKeyhole size={25} /></span>
+            <span className="section-kicker">MCU SECURE ACCESS</span>
+            <h2 id="service-login-title">Sign in to continue</h2>
+            <p>
+              Use your official MCU Microsoft 365 account to access
+              <strong> {loginModal.title}</strong>.
+            </p>
+            <button className="m365-service-button" onClick={continueWithMicrosoft}>
+              <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
+              Continue with Microsoft 365
+              <ArrowRight size={18} />
+            </button>
+            <small><ShieldCheck size={14} /> Authentication is securely handled by Microsoft Entra ID.</small>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

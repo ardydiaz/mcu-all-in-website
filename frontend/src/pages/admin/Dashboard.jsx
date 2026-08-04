@@ -3,7 +3,7 @@ import {
   Activity, Bell, BriefcaseBusiness, Check, CheckCircle2, Clock3, Edit3,
   ExternalLink, Eye, Grid2X2, HeartPulse, Layers3, Link2, Menu, Microscope,
   Plus, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Trash2, Users, X,
-  Tags, ChartNoAxesCombined,
+  Tags, ChartNoAxesCombined, ChevronDown, LogOut, UserRound,
 } from "lucide-react";
 import { adminApi } from "../../services/adminApi";
 
@@ -17,7 +17,16 @@ const emptyForm = {
   description: "", color: "violet",
 };
 
-function Sidebar({ serviceCount, open, onClose, onLogout }) {
+function initialsFor(user) {
+  const label = user?.fullname || user?.name || user?.email || "Administrator";
+  return label.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
+function displayNameFor(user) {
+  return user?.fullname || user?.name || user?.email || "MCU Administrator";
+}
+
+function Sidebar({ serviceCount, open, onClose, onLogout, user }) {
   const links = [
     [Grid2X2, "Dashboard", "/admin"],
     [Layers3, "Web services", "/admin/systems", serviceCount],
@@ -53,6 +62,28 @@ function Sidebar({ serviceCount, open, onClose, onLogout }) {
   );
 }
 
+function AccountMenu({ user, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const name = displayNameFor(user);
+  const role = user?.role_name || user?.role || "Administrator";
+
+  return <div className="header-account">
+    <button className="header-account-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-haspopup="menu">
+      <span className="header-avatar">{initialsFor(user)}</span>
+      <span className="header-account-copy"><strong>{name}</strong><small>{role}</small></span>
+      <ChevronDown size={16} className={open ? "rotated" : ""} />
+    </button>
+    {open && <div className="account-dropdown" role="menu">
+      <div className="account-dropdown-summary">
+        <span className="header-avatar large">{initialsFor(user)}</span>
+        <span><strong>{name}</strong><small>{user?.email || "MCU account"}</small></span>
+      </div>
+      <a href="/admin/settings" role="menuitem" onClick={() => setOpen(false)}><UserRound size={16} />Account settings</a>
+      <button type="button" role="menuitem" onClick={onLogout}><LogOut size={16} />Sign out</button>
+    </div>}
+  </div>;
+}
+
 function MetricCard({ tone, icon: Icon, label, value, children }) {
   return (
     <article className={`metric ${tone}`}>
@@ -66,13 +97,23 @@ function MetricCard({ tone, icon: Icon, label, value, children }) {
 function ServiceModal({ service, onClose, onSave }) {
   const [form, setForm] = useState(service ? { ...service } : emptyForm);
   const [saving, setSaving] = useState(false);
-  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const [errors, setErrors] = useState({});
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    setErrors((current) => ({ ...current, [key]: "" }));
+  };
 
   async function submit(event) {
     event.preventDefault();
     setSaving(true);
-    await onSave({ ...form, url: form.url || "#" });
-    setSaving(false);
+    try {
+      await onSave(form);
+    } catch (error) {
+      const fieldErrors = (error.errors || []).reduce((result, item) => ({ ...result, [item.field]: item.message }), {});
+      setErrors(Object.keys(fieldErrors).length ? fieldErrors : { form: error.message });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -83,16 +124,16 @@ function ServiceModal({ service, onClose, onSave }) {
           <button type="button" className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="form-grid">
-          <label className="full">Service name<input value={form.title} onChange={(e) => update("title", e.target.value)} required placeholder="e.g. Student Portal" /></label>
+          <label className={`full ${errors.title ? "has-error" : ""}`}>Service name<input value={form.title} onChange={(e) => update("title", e.target.value)} aria-invalid={Boolean(errors.title)} placeholder="e.g. Student Portal" />{errors.title && <small className="field-error">{errors.title}</small>}</label>
           <label>Category<select value={form.category} onChange={(e) => update("category", e.target.value)}>{["University","Students","Academics","Healthcare","Corporate","Community"].map((item) => <option key={item}>{item}</option>)}</select></label>
           <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-          <label className="full">Website URL<input value={form.url === "#" ? "" : form.url} onChange={(e) => update("url", e.target.value)} type="url" placeholder="https://www.example.com" /></label>
-          <label className="full">Description<textarea value={form.description} onChange={(e) => update("description", e.target.value)} required rows="3" /></label>
+          <label className={`full ${errors.url ? "has-error" : ""}`}>Website URL<input value={form.url === "#" ? "" : form.url} onChange={(e) => update("url", e.target.value)} type="text" aria-invalid={Boolean(errors.url)} placeholder="https://www.example.com" />{errors.url && <small className="field-error">{errors.url}</small>}</label>
+          <label className={`full ${errors.description ? "has-error" : ""}`}>Description<textarea value={form.description} onChange={(e) => update("description", e.target.value)} aria-invalid={Boolean(errors.description)} rows="3" />{errors.description && <small className="field-error">{errors.description}</small>}</label>
           <fieldset className="full"><legend>Accent color</legend><div className="color-options">
             {Object.entries(palette).map(([name, color]) => <label className="color-option" title={name} key={name}><input type="radio" name="color" value={name} checked={form.color === name} onChange={() => update("color", name)} /><span style={{ "--swatch": color }} /></label>)}
           </div></fieldset>
         </div>
-        <div className="modal-actions"><button type="button" className="cancel-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={saving}>{saving ? "Saving..." : "Save service"}</button></div>
+        {errors.form && <p className="modal-form-error">{errors.form}</p>}<div className="modal-actions"><button type="button" className="cancel-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={saving}>{saving ? "Saving..." : "Save service"}</button></div>
       </form>
     </div>
   );
@@ -131,16 +172,21 @@ function ServicesPanel({ services, query, category, onCategory, onEdit, onDelete
   );
 }
 
-function ActivityPanel() {
-  const items = [
-    [RefreshCw, "cyan-bg", <><strong>Admissions</strong> link updated</>, "12 minutes ago · by Admin"],
-    [Plus, "pink-bg", <><strong>Alumni Network</strong> added</>, "2 hours ago · by Admin"],
-    [Check, "lime-bg", <><strong>MCU Hospital</strong> verified</>, "Yesterday · by System"],
-    [Settings, "orange-bg", <>Directory settings changed</>, "Jul 25, 2026 · by Admin"],
+function ActivityPanel({ activities = [] }) {
+  const fallbackItems = [
+    { action: "system.updated", actor: "Admin", details: { title: "Admissions" }, createdAt: new Date().toISOString() },
+    { action: "system.created", actor: "Admin", details: { title: "Alumni Network" }, createdAt: new Date().toISOString() },
   ];
+  const items = (activities.length ? activities : fallbackItems).slice(0, 4);
+  const iconForAction = (action) => action.includes("created") ? [Plus, "pink-bg"] : action.includes("deleted") ? [Trash2, "orange-bg"] : [RefreshCw, "cyan-bg"];
   return <aside className="panel activity-panel" id="activity">
     <div className="panel-heading"><div><h2>Recent activity</h2><p>Latest admin actions</p></div><button className="more-button">•••</button></div>
-    <div className="timeline">{items.map(([Icon, tone, text, time], index) => <div className="timeline-item" key={index}><span className={`timeline-icon ${tone}`}><Icon /></span><div><p>{text}</p><small>{time}</small></div></div>)}</div>
+    <div className="timeline">{items.map((item, index) => {
+      const [Icon, tone] = iconForAction(item.action);
+      const title = item.details?.title || item.action.replace("system.", "System ").replace("_", " ");
+      const time = item.createdAt || item.created_at;
+      return <div className="timeline-item" key={item.id || index}><span className={`timeline-icon ${tone}`}><Icon /></span><div><p><strong>{title}</strong> {item.action.replace("system.", "").replace("_", " ")}</p><small>{time ? new Date(time).toLocaleString() : "Just now"} · by {item.actor || "System"}</small></div></div>;
+    })}</div>
     <button className="activity-link">View activity log <span>→</span></button>
   </aside>;
 }
@@ -153,14 +199,21 @@ function Dashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [dashboard, setDashboard] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   async function loadServices() {
-    try { setServices(await adminApi.getServices()); }
+    try {
+      const [serviceData, dashboardData, profileData] = await Promise.all([adminApi.getServices(), adminApi.getDashboard(), adminApi.getCurrentUser()]);
+      setServices(serviceData);
+      setDashboard(dashboardData);
+      setCurrentUser(profileData.user);
+    }
     catch (error) { if (error.status === 401) window.location.href = "/login"; else showToast(error.message); }
   }
   useEffect(() => { loadServices(); }, []);
   function showToast(message) { setToast(message); setTimeout(() => setToast(""), 2400); }
-  async function logout() { await adminApi.logout(); window.location.href = "/login"; }
+  async function logout() { await adminApi.logout(); window.location.href = "/login?logout=success"; }
   async function save(service) {
     service.id ? await adminApi.updateService(service.id, service) : await adminApi.createService(service);
     setModalOpen(false); showToast(service.id ? "Service updated successfully." : "Service added successfully."); loadServices();
@@ -173,27 +226,27 @@ function Dashboard() {
     await adminApi.updateStatus(service.id, service.status === "active" ? "inactive" : "active");
     showToast(`${service.title} status updated.`); loadServices();
   }
-  const activeCount = services.filter((service) => service.status === "active").length;
+  const activeCount = dashboard?.metrics?.activeSystems ?? services.filter((service) => service.status === "active").length;
 
   return <div className="admin-shell">
-    <Sidebar serviceCount={services.length} open={menuOpen} onClose={() => setMenuOpen(false)} onLogout={logout} />
+    <Sidebar serviceCount={services.length} open={menuOpen} onClose={() => setMenuOpen(false)} onLogout={logout} user={currentUser} />
     <div className="main-area">
       <header className="topbar">
         <button className="mobile-menu" onClick={() => setMenuOpen((value) => !value)}><Menu /></button>
         <label className="global-search"><Search /><input value={query} onChange={(e) => setQuery(e.target.value)} type="search" placeholder="Search services..." /><kbd>⌘ K</kbd></label>
-        <div className="top-actions"><button className="icon-button"><Bell /><i /></button><span className="top-divider" /><div className="date-block"><small>TODAY</small><strong>{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong></div></div>
+        <div className="top-actions"><button className="icon-button"><Bell /><i /></button><span className="top-divider" /><div className="date-block"><small>TODAY</small><strong>{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong></div><span className="top-divider account-divider" /><AccountMenu user={currentUser} onLogout={logout} /></div>
       </header>
       <main>
         <section className="welcome" id="dashboard"><div><span className="eyebrow"><i /> ADMIN OVERVIEW</span><h1>Good day, Administrator.</h1><p>Here’s what’s happening across the MCU digital ecosystem.</p></div><button className="primary-button" onClick={() => { setModalService(undefined); setModalOpen(true); }}><span>＋</span> Add new service</button></section>
         <section className="metrics">
-          <MetricCard tone="violet" icon={Layers3} label="TOTAL SERVICES" value={services.length}><b>↑ 2</b> from last month</MetricCard>
+          <MetricCard tone="violet" icon={Layers3} label="TOTAL SERVICES" value={dashboard?.metrics?.systems ?? services.length}><b>↑ 2</b> from last month</MetricCard>
           <MetricCard tone="cyan" icon={CheckCircle2} label="ACTIVE SERVICES" value={activeCount}><i /> Live and accessible</MetricCard>
-          <MetricCard tone="orange" icon={Eye} label="VISITS THIS MONTH" value="24.8K"><b>↑ 12.4%</b> vs. last month</MetricCard>
+          <MetricCard tone="orange" icon={Eye} label="VISITS THIS MONTH" value={dashboard?.metrics?.visits ? `${(dashboard.metrics.visits / 1000).toFixed(1)}K` : "—"}><b>↑ {dashboard?.metrics?.visitChangePercent ?? 0}%</b> vs. last month</MetricCard>
           <MetricCard tone="pink" icon={Clock3} label="LAST UPDATED" value="Today">Service directory synced</MetricCard>
         </section>
         <section className="content-grid">
           <ServicesPanel services={services} query={query} category={category} onCategory={setCategory} onEdit={(service) => { setModalService(service); setModalOpen(true); }} onDelete={remove} onStatus={toggleStatus} />
-          <ActivityPanel />
+          <ActivityPanel activities={dashboard?.recentActivity} />
         </section>
       </main>
     </div>

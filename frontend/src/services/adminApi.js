@@ -16,7 +16,10 @@ async function request(path, options = {}) {
   if (!response.ok) {
     const contentType = response.headers.get("content-type") || "";
     const payload = contentType.includes("application/json") ? await response.json() : null;
-    throw new Error(payload?.message || "The request could not be completed.");
+    const error = new Error(payload?.message || "The request could not be completed.");
+    error.status = response.status;
+    error.errors = payload?.errors || [];
+    throw error;
   }
 
   if (response.status === 204) return null;
@@ -24,8 +27,16 @@ async function request(path, options = {}) {
 }
 
 export const adminApi = {
-  login: (credentials) => request("/api/login", { method: "POST", body: JSON.stringify(credentials) }),
   logout: () => request("/api/logout", { method: "POST" }),
+  getCurrentUser: () => request("/api/me"),
+  getUsers: () => request("/api/users"),
+  getRoles: () => request("/api/roles"),
+  updateUserRole: (id, roleId) => request(`/api/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ roleId }) }),
+  getCategories: () => request("/api/categories"),
+  createCategory: (category) => request("/api/categories", { method: "POST", body: JSON.stringify(category) }),
+  deleteCategory: (id) => request(`/api/categories/${id}`, { method: "DELETE" }),
+  getAnalytics: () => request("/api/analytics"),
+  getDashboard: () => request("/api/dashboard"),
   getServices: () => request("/api/services"),
   createService: (service) => request("/api/services", { method: "POST", body: JSON.stringify(service) }),
   updateService: (id, service) => request(`/api/services/${id}`, { method: "PUT", body: JSON.stringify(service) }),
