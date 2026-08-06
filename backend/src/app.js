@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
 import apiRoutes from "./routes/index.js";
 import { corsConfig } from "./config/cors.js";
@@ -20,11 +21,14 @@ app.get("/", (_request, response) => response.json({
   health: "/api/health",
   documentation: "/api/docs",
 }));
+// Swagger uses inline initialization scripts. Serve it before the strict CSP
+// below, while the API itself receives Helmet's full security headers.
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customSiteTitle: "MCU All-in-One API Docs",
   swaggerOptions: { persistAuthorization: true },
 }));
 app.get("/api/openapi.json", (_request, response) => response.json(swaggerDocument));
+app.use(helmet());
 app.use("/api", apiRoutes);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

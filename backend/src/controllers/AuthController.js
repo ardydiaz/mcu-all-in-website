@@ -74,6 +74,14 @@ export const AuthController = {
     const safeReturn = requestedReturn?.startsWith("/") ? requestedReturn : null;
     const adminAccessDenied = !isAdmin && safeReturn?.startsWith("/admin");
     const destination = isAdmin ? (safeReturn || "/admin") : (safeReturn || "/");
+
+    // A public sign-in must return straight to the public portal.  The
+    // /login page is the admin access screen and is only needed for an
+    // admin-dashboard handoff or an approval-required message.
+    if (!adminAccessDenied && !destination.startsWith("/admin")) {
+      return response.redirect(new URL(destination, clientUrl).toString());
+    }
+
     const loginHandoff = new URL("/login", clientUrl);
     loginHandoff.searchParams.set("microsoftLogin", adminAccessDenied ? "approvalRequired" : "success");
     if (!adminAccessDenied) loginHandoff.searchParams.set("next", destination);
