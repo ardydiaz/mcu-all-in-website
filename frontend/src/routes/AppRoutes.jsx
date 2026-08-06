@@ -21,10 +21,12 @@ import AdminSystems from "../pages/admin/Systems";
 import Analytics from "../pages/admin/Analytics";
 import Settings from "../pages/admin/Settings";
 import Announcements from "../pages/admin/Announcements";
+import SessionInactivityGuard from "../components/SessionInactivityGuard";
 
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <SessionInactivityGuard />
       <Routes>
         {/* PUBLIC WEBSITE */}
         <Route element={<PublicLayout />}>

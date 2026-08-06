@@ -45,7 +45,7 @@ export default function Login() {
   function signInWithMicrosoft() {
     setStarting(true);
     const requestedReturn = new URLSearchParams(window.location.search).get("returnTo");
-    const returnTo = requestedReturn?.startsWith("/") ? requestedReturn : "/admin";
+    const returnTo = requestedReturn?.startsWith("/") ? requestedReturn : "/";
     window.location.href = `/api/auth/microsoft?returnTo=${encodeURIComponent(returnTo)}`;
   }
 

@@ -81,7 +81,6 @@ function Home() {
   const [typedPrompt, setTypedPrompt] = useState("");
   const [avatarImageFailed, setAvatarImageFailed] = useState(false);
   const [avatarTone] = useState(() => ["violet", "cyan", "pink", "orange", "lime"][Math.floor(Math.random() * 5)]);
-  const [avatarIndex] = useState(() => Math.floor(Math.random() * 20));
   const [greeting, setGreeting] = useState(greetingForManila);
   const [announcements, setAnnouncements] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -236,6 +235,11 @@ function Home() {
     window.location.href = "/api/auth/microsoft?returnTo=/";
   };
 
+  const promptPublicSignIn = (event) => {
+    event?.preventDefault();
+    setLoginModal({ title: "MCU All-in-One", href: "/" });
+  };
+
   return (
     <>
     <div className="mobile-app-shell">
@@ -243,7 +247,7 @@ function Home() {
       {selectedAnnouncement && <div className="announcement-detail-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedAnnouncement(null)}><article className="announcement-detail-modal"><button className="announcement-detail-close" onClick={() => setSelectedAnnouncement(null)} aria-label="Close announcement"><X size={20} /></button><span className="announcement-detail-icon"><Megaphone size={22} /></span><small>MCU ANNOUNCEMENT · {formatAnnouncementDate(selectedAnnouncement.publishedAt || selectedAnnouncement.createdAt)}</small><h2>{selectedAnnouncement.title}</h2>{selectedAnnouncement.excerpt && <p className="announcement-detail-excerpt">{selectedAnnouncement.excerpt}</p>}<p className="announcement-detail-content">{selectedAnnouncement.content}</p>{selectedAnnouncement.linkUrl && <a href={selectedAnnouncement.linkUrl} target="_blank" rel="noreferrer">Open related link <ExternalLink size={17} /></a>}</article></div>}
       <main className="mobile-app-content">
         <div className="mcu-profile-avatar-slot">
-          <span className={`mcu-profile-avatar ${avatarTone} ${!currentUser?.avatarUrl || avatarImageFailed ? "is-fallback" : ""}`} style={{ "--avatar-x": `${(avatarIndex % 5) * 25}%`, "--avatar-y": `${Math.floor(avatarIndex / 5) * (100 / 3)}%` }}>
+          <span className={`mcu-profile-avatar ${avatarTone} ${!currentUser?.avatarUrl || avatarImageFailed ? "is-fallback" : ""}`} style={{ "--avatar-x": "50%", "--avatar-y": "4%" }}>
             {currentUser?.avatarUrl && !avatarImageFailed ? <img src={currentUser.avatarUrl} alt="Your Microsoft profile" onError={() => setAvatarImageFailed(true)} /> : <span className="mcu-illustrated-avatar" aria-label="Illustrated profile avatar" role="img" />}
           </span>
         </div>
@@ -260,7 +264,7 @@ function Home() {
         <div className="desktop-directory-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={24} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}{!catalogLoading && !filteredSites.length && <p className="desktop-directory-empty">No matching services found.</p>}</div>
       </section>
       {directoryOpen && <div className="service-directory-overlay" onMouseDown={(event) => event.target === event.currentTarget && setDirectoryOpen(false)}><section className="service-directory-modal"><div className="service-directory-modal-head"><div><span className="section-kicker"><i /> MCU DIGITAL ECOSYSTEM</span><h2>All services</h2><p>{filteredSites.length} connected MCU services</p></div><button onClick={() => setDirectoryOpen(false)} aria-label="Close directory"><X size={22} /></button></div><label className="service-directory-modal-search"><Search size={20} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label><div className="service-directory-modal-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="service-directory-modal-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}</div></section></div>}
-      <nav className="mobile-bottom-nav"><button className="active"><House size={20} />Home</button><button onClick={showAllServices}><Search size={20} />Directory</button><a href="/login"><ShieldCheck size={20} />Sign in</a></nav>
+      <nav className="mobile-bottom-nav"><button className="active"><House size={20} />Home</button><button onClick={showAllServices}><Search size={20} />Directory</button><a href="/" onClick={promptPublicSignIn}><ShieldCheck size={20} />Sign in</a></nav>
     </div>
     <div className="app">
       <header className="site-header">
@@ -281,7 +285,7 @@ function Home() {
           <a href="#support">Support</a>
         </nav>
 
-        <a className="contact-button" href="/login">
+        <a className="contact-button" href="/" onClick={promptPublicSignIn}>
           <ShieldCheck size={17} />
           Sign in
         </a>
@@ -529,6 +533,19 @@ function Home() {
         </div>
       )}
     </div>
+    {loginModal && (
+      <div className="service-login-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setLoginModal(null)}>
+        <section className="service-login-modal" role="dialog" aria-modal="true" aria-labelledby="service-login-title-active">
+          <button className="service-login-close" onClick={() => setLoginModal(null)} aria-label="Close login dialog"><X size={19} /></button>
+          <span className="service-lock"><LockKeyhole size={25} /></span>
+          <span className="section-kicker">MCU SECURE ACCESS</span>
+          <h2 id="service-login-title-active">Sign in to continue</h2>
+          <p>Use your official MCU Microsoft 365 account to access<strong> {loginModal.title}</strong>.</p>
+          <button className="m365-service-button" onClick={continueWithMicrosoft}><span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>Continue with Microsoft 365<ArrowRight size={18} /></button>
+          <small><ShieldCheck size={14} />Authentication is securely handled by Microsoft Entra ID.</small>
+        </section>
+      </div>
+    )}
     </>
   );
 }
