@@ -81,6 +81,12 @@ export const swaggerDocument = {
     "/me": {
       get: { tags: ["Authentication"], summary: "Get authenticated user", security: bearerAuth, responses: { 200: { description: "User claims" }, 401: { description: "Authentication required" } } },
     },
+    "/me/recent-services": {
+      get: { tags: ["Authentication"], summary: "Get the signed-in user's recently visited services", security: bearerAuth, responses: responses("Recent services") },
+    },
+    "/me/recent-services/{systemId}": {
+      post: { tags: ["Authentication"], summary: "Record a visit to a service", security: bearerAuth, parameters: [{ name: "systemId", in: "path", required: true, schema: { type: "integer" } }], responses: { 201: { description: "Visit recorded" }, 404: { description: "System not found" } } },
+    },
     "/public/systems": {
       get: {
         tags: ["Public Directory"], summary: "List active public systems",
