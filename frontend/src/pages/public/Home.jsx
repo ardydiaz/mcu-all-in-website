@@ -45,6 +45,8 @@ const tonesByColor = {
   pink: "pink",
 };
 
+const directoryCategoryOrder = ["Student Faculty", "Administrator", "External Affairs"];
+
 function ExternalLinkAction() {
   return <span className="external-link-action" aria-hidden="true"><ExternalLink size={20} /></span>;
 }
@@ -74,6 +76,7 @@ function Home() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loginModal, setLoginModal] = useState(null);
   const [sites, setSites] = useState([]);
+  const [recentSites, setRecentSites] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -85,6 +88,8 @@ function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [quickAccessPage, setQuickAccessPage] = useState(0);
 
   useEffect(() => setAvatarImageFailed(false), [currentUser?.avatarUrl]);
 
@@ -95,15 +100,36 @@ function Home() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const loadRecentlyVisited = useCallback(() => {
+    if (!currentUser) {
+      setRecentSites([]);
+      return;
+    }
+    fetch("/api/me/recent-services")
+      .then((response) => response.ok ? response.json() : [])
+      .then((items) => setRecentSites(Array.isArray(items) ? items.map((system) => ({
+        ...system,
+        title: system.title || system.name,
+        href: system.url,
+        tone: tonesByColor[system.color] || "purple",
+        icon: iconsByCategory[system.category] || BookOpen,
+      })) : []))
+      .catch(() => setRecentSites([]));
+  }, [currentUser]);
+
+  useEffect(() => { loadRecentlyVisited(); }, [loadRecentlyVisited]);
+
   const loadAnnouncements = useCallback(() => {
+    if (!currentUser) {
+      setAnnouncements([]);
+      setNotificationsOpen(false);
+      return;
+    }
     fetch("/api/notifications")
-      .then(async (response) => response.ok ? response.json() : null)
-      .then((result) => {
-        if (result?.announcements) setAnnouncements(result.announcements);
-        else return fetch("/api/public/announcements").then((response) => response.ok ? response.json() : []).then((items) => setAnnouncements(Array.isArray(items) ? items.map((item) => ({ ...item, isRead: false })) : []));
-      })
+      .then((response) => response.ok ? response.json() : { announcements: [] })
+      .then((result) => setAnnouncements(Array.isArray(result?.announcements) ? result.announcements : []))
       .catch(() => setAnnouncements([]));
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     loadAnnouncements();
@@ -204,11 +230,44 @@ function Home() {
     });
   }, [sites, category, query]);
 
+  const categoryGroups = useMemo(() => {
+    const normalizedQuery = query.toLowerCase().trim();
+    const names = categories
+      .filter((item) => item !== "All" && (category === "All" || item === category))
+      .sort((first, second) => {
+        const firstIndex = directoryCategoryOrder.indexOf(first);
+        const secondIndex = directoryCategoryOrder.indexOf(second);
+        const safeFirstIndex = firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex;
+        const safeSecondIndex = secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex;
+        return safeFirstIndex - safeSecondIndex || first.localeCompare(second);
+      });
+    return names.map((name) => ({
+      name,
+      sites: sites.filter((site) => site.category === name && (!normalizedQuery || `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery))),
+    })).filter((group) => group.sites.length > 0);
+  }, [sites, categories, category, query]);
+
   const quickSites = useMemo(() => {
     const normalizedQuery = quickQuery.toLowerCase().trim();
     if (!normalizedQuery) return sites;
     return sites.filter((site) => `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery));
   }, [sites, quickQuery]);
+
+  const heroQuickSites = useMemo(() => {
+    if (!sites.length) return [];
+    const start = (quickAccessPage * 3) % sites.length;
+    return Array.from({ length: Math.min(3, sites.length) }, (_, index) => sites[(start + index) % sites.length]);
+  }, [sites, quickAccessPage]);
+
+  useEffect(() => {
+    if (sites.length <= 3) return undefined;
+    const pageCount = Math.ceil(sites.length / 3);
+    const timer = window.setInterval(() => setQuickAccessPage((page) => (page + 1) % pageCount), 4500);
+    return () => window.clearInterval(timer);
+  }, [sites.length]);
+
+  const sidebarRecentSites = currentUser && recentSites.length ? recentSites : quickSites.slice(0, 3);
+  const sidebarRecentTitle = currentUser && recentSites.length ? "Recently visited" : "Recently added";
 
   const scrollToDirectory = () => {
     document.getElementById("directory")?.scrollIntoView({ behavior: "smooth" });
@@ -223,10 +282,11 @@ function Home() {
   const openService = (event, site) => {
     event.preventDefault();
     if (currentUser) {
-      if (site.href !== "#") window.location.assign(site.href);
-      return;
+      if (Number.isSafeInteger(Number(site.id))) {
+        fetch(`/api/me/recent-services/${site.id}`, { method: "POST", keepalive: true }).catch(() => {});
+      }
     }
-    setLoginModal(site);
+    if (site.href !== "#") window.open(site.href, "_blank", "noopener,noreferrer");
   };
 
   const continueWithMicrosoft = () => {
@@ -243,7 +303,7 @@ function Home() {
   return (
     <>
     <div className="mobile-app-shell">
-      <header className="mobile-app-header"><a className="mobile-app-brand" href="#"><span><Building2 size={20} /></span><strong>MCU <small>ALL-IN-ONE</small></strong></a><div className="notification-control"><button aria-label="Announcements" aria-expanded={notificationsOpen} onClick={toggleNotifications}><Bell size={22} />{unreadAnnouncements.length > 0 && <i>{unreadAnnouncements.length > 9 ? "9+" : unreadAnnouncements.length}</i>}</button>{notificationsOpen && <section className="announcement-menu" aria-label="Announcements"><div className="announcement-menu-head"><div><strong>Notifications</strong><small>{announcements.length ? `${announcements.length} announcement${announcements.length === 1 ? "" : "s"}` : "You are up to date"}</small></div><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={18} /></button></div><div className="announcement-menu-list">{announcements.length ? announcements.map((announcement) => <button className={announcement.isRead ? "" : "unread"} key={announcement.id} onClick={() => openAnnouncement(announcement)}><span><Megaphone size={17} /></span><div><strong>{announcement.title}</strong><small>{announcement.excerpt || "Read the latest MCU announcement."}</small></div></button>) : <p><Bell size={20} />No new announcements.</p>}</div></section>}</div></header>
+      <header className="mobile-app-header"><a className="mobile-app-brand" href="#"><span><Building2 size={20} /></span><strong>MCU <small>ALL-IN-ONE</small></strong></a>{currentUser && <div className="notification-control"><button aria-label="Announcements" aria-expanded={notificationsOpen} onClick={toggleNotifications}><Bell size={22} />{unreadAnnouncements.length > 0 && <i>{unreadAnnouncements.length > 9 ? "9+" : unreadAnnouncements.length}</i>}</button>{notificationsOpen && <section className="announcement-menu" aria-label="Announcements"><div className="announcement-menu-head"><div><strong>Notifications</strong><small>{announcements.length ? `${announcements.length} announcement${announcements.length === 1 ? "" : "s"}` : "You are up to date"}</small></div><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={18} /></button></div><div className="announcement-menu-list">{announcements.length ? announcements.map((announcement) => <button className={announcement.isRead ? "" : "unread"} key={announcement.id} onClick={() => openAnnouncement(announcement)}><span><Megaphone size={17} /></span><div><strong>{announcement.title}</strong><small>{announcement.excerpt || "Read the latest MCU announcement."}</small></div></button>) : <p><Bell size={20} />No new announcements.</p>}</div></section>}</div>}</header>
       {selectedAnnouncement && <div className="announcement-detail-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedAnnouncement(null)}><article className="announcement-detail-modal"><button className="announcement-detail-close" onClick={() => setSelectedAnnouncement(null)} aria-label="Close announcement"><X size={20} /></button><span className="announcement-detail-icon"><Megaphone size={22} /></span><small>MCU ANNOUNCEMENT · {formatAnnouncementDate(selectedAnnouncement.publishedAt || selectedAnnouncement.createdAt)}</small><h2>{selectedAnnouncement.title}</h2>{selectedAnnouncement.excerpt && <p className="announcement-detail-excerpt">{selectedAnnouncement.excerpt}</p>}<p className="announcement-detail-content">{selectedAnnouncement.content}</p>{selectedAnnouncement.linkUrl && <a href={selectedAnnouncement.linkUrl} target="_blank" rel="noreferrer">Open related link <ExternalLink size={17} /></a>}</article></div>}
       <main className="mobile-app-content">
         <div className="mcu-profile-avatar-slot">
@@ -254,7 +314,7 @@ function Home() {
         <section className="mobile-greeting"><p>{greeting}</p><h1>{currentUser?.fullname?.split(" ")[0] || currentUser?.name?.split(" ")[0] || "MCU Guest"} <span>👋</span></h1><small className="typewriter-prompt">{typedPrompt}<i /></small></section>
         <label className="mobile-service-search"><Search size={20} /><input value={quickQuery} onChange={(event) => setQuickQuery(event.target.value)} placeholder="Search Quick Access..." /></label>
         <section className="mobile-section"><div className="mobile-section-title"><h2>Quick Access</h2><button onClick={showAllServices}>View all</button></div><div className="mobile-quick-grid">{quickSites.slice(0, 6).map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><small>{site.title}</small></button>; })}</div></section>
-        <section className="mobile-section"><div className="mobile-section-title"><h2>Recently added</h2><button onClick={showAllServices}>View all</button></div><div className="mobile-recent-list">{quickSites.slice(0, 3).map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={19} /></span><div><strong>{site.title}</strong><small>{site.description}</small></div><ExternalLinkAction /></button>; })}</div></section>
+        <section className="mobile-section"><div className="mobile-section-title"><h2>{sidebarRecentTitle}</h2><button onClick={showAllServices}>View all</button></div><div className="mobile-recent-list">{sidebarRecentSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={19} /></span><div><strong>{site.title}</strong><small>{site.description}</small></div><ExternalLinkAction /></button>; })}</div></section>
       </main>
       <section className="desktop-app-directory">
         <div className="desktop-directory-title"><div><span className="section-kicker"><i /> LIVE MCU DIRECTORY</span><h2>Directory</h2></div></div>
@@ -269,13 +329,7 @@ function Home() {
     <div className="app">
       <header className="site-header">
         <a className="brand" href="#" aria-label="MCU All-in-One home">
-          <span className="brand-mark" aria-hidden="true">
-            <Building2 size={22} strokeWidth={2.3} />
-          </span>
-          <span className="brand-copy">
-            <strong>MCU</strong>
-            <span>ALL-IN-ONE</span>
-          </span>
+          <img className="mcu-official-logo" src="/images/mcu-logo-purple.png" alt="Manila Central University" />
         </a>
 
         <nav className="desktop-nav" aria-label="Primary navigation">
@@ -284,11 +338,6 @@ function Home() {
           <a href="#about">About MCU</a>
           <a href="#support">Support</a>
         </nav>
-
-        <a className="contact-button" href="/" onClick={promptPublicSignIn}>
-          <ShieldCheck size={17} />
-          Sign in
-        </a>
 
         <button
           className="menu-button"
@@ -351,21 +400,20 @@ function Home() {
               </div>
               <div className="mini-logo">MCU</div>
             </div>
-            <div className="quick-links">
-              {[
-                [GraduationCap, "Student Portal", "View your student account"],
-                [CalendarDays, "Admissions", "Apply and enroll at MCU"],
-                [HeartPulse, "MCU Hospital", "Healthcare and patient services"],
-              ].map(([Icon, title, copy]) => (
-                <a href="#" className="quick-link" key={title}>
-                  <span className="quick-icon"><Icon size={21} /></span>
+            <div className="quick-links" key={quickAccessPage}>
+              {heroQuickSites.map((site) => {
+                const Icon = site.icon;
+                return (
+                <a href={site.href} className="quick-link" key={site.id || site.title} target="_blank" rel="noreferrer" onClick={(event) => openService(event, site)}>
+                  <span className={`quick-icon ${site.tone}`}><Icon size={21} /></span>
                   <span>
-                    <strong>{title}</strong>
-                    <small>{copy}</small>
+                    <strong>{site.title}</strong>
+                    <small>{site.description}</small>
                   </span>
                   <ChevronRight size={19} />
                 </a>
-              ))}
+                );
+              })}
             </div>
             <button className="view-all" onClick={scrollToDirectory}>
               View full directory
@@ -398,7 +446,32 @@ function Home() {
             </label>
           </div>
 
-          <div className="directory-toolbar">
+          <div className="service-category-groups">
+            {categoryGroups.map((group) => (
+              <section className="service-category-group" key={group.name} aria-label={`${group.name} services`}>
+                <div className="directory-toolbar category-group-toolbar">
+                  <div className="filters" aria-label={`Filter ${group.name} services`}>
+                    <button className={category === "All" ? "selected" : ""} onClick={() => setCategory("All")}>All</button>
+                    <button className={category === group.name ? "selected" : ""} onClick={() => setCategory(group.name)}>{group.name}</button>
+                  </div>
+                  <span className="result-count"><strong>{group.sites.length}</strong> connected services</span>
+                </div>
+                <div className="site-grid category-site-grid">
+                  {group.sites.map((site, index) => {
+                    const Icon = site.icon;
+                    return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
+                      <span className="card-accent" aria-hidden="true" />
+                      <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
+                      <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
+                      <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
+                    </a>;
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <div className="directory-toolbar global-directory-toolbar">
             <div className="filters" aria-label="Filter services">
               {categories.map((item) => (
                 <button
@@ -415,13 +488,15 @@ function Home() {
             </span>
           </div>
 
-          <div className="site-grid">
+          <div className="site-grid global-site-grid">
             {filteredSites.map((site, index) => {
               const Icon = site.icon;
               return (
                 <a
                   className={`site-card site-card-${site.tone}`}
                   href={site.href}
+                  target="_blank"
+                  rel="noreferrer"
                   key={site.title}
                   style={{ "--card-index": index }}
                   onClick={(event) => openService(event, site)}
@@ -475,9 +550,9 @@ function Home() {
                 community easier to reach.
               </p>
             </div>
-            <a href="#" className="secondary-action">
+            <button type="button" className="secondary-action story-trigger" onClick={() => setStoryOpen(true)}>
               Discover our story <ArrowRight size={17} />
-            </a>
+            </button>
           </div>
         </section>
 
@@ -495,13 +570,42 @@ function Home() {
         </section>
       </main>
 
+      {storyOpen && (
+        <div className="mcu-story-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setStoryOpen(false)}>
+          <article className="mcu-story-modal" role="dialog" aria-modal="true" aria-labelledby="mcu-story-title">
+            <button className="mcu-story-close" type="button" onClick={() => setStoryOpen(false)} aria-label="Close MCU story"><X size={21} /></button>
+            <section className="mcu-story-hero">
+              <span className="section-kicker"><span className="live-pulse" /> OUR MCU STORY</span>
+              <h2 id="mcu-story-title">One community.<br /><span>One MCU.</span></h2>
+              <p>Placeholder introduction: Share a short, inspiring overview of Manila Central University, its people, and its continuing commitment to service.</p>
+              <div className="mcu-story-stat-grid">
+                <div><strong>1904</strong><span>Founded</span></div>
+                <div><strong>120+</strong><span>Years of service</span></div>
+                <div><strong>06</strong><span>Digital communities</span></div>
+              </div>
+            </section>
+
+            <section className="mcu-story-content">
+              <div className="mcu-story-section-head">
+                <span>OUR JOURNEY</span>
+                <h3>Growing with purpose</h3>
+                <p>Placeholder timeline content. Replace these short entries with approved MCU milestones and historic achievements.</p>
+              </div>
+              <div className="mcu-story-timeline">
+                <div><b>1904</b><span /><p><strong>University founded</strong>The success of the review resulted in more students wanting to join the sessions and this brought about the establishment of Escuela de Farmacia del Liceo de Manila, the first private institution operated by Filipinos in the country. </p></div>
+                <div><b>Today</b><span /><p><strong>Why MCU</strong>Through the years, we remain deeply rooted in our heritage yet we are intentional to be dynamic and relevant. With a renewed vigor, we are forward-looking to a brighter future by advancing that same pioneering and innovative spirit our institution has engraved in us since 1904.</p></div>
+                <div><b>Next</b><span /><p><strong>Our Manifesto</strong>We are Educators and Nurturers. We are entrusted to teach and transform learners to become dynamic and competent members of society. We equip minds with high-quality and values-based education. We guide students toward excellence, integrity, perseverance, and innovation. We take responsibility in the continuous improvement and growth of our community by nurturing talents, knowledge, skills, character, and sense of service.</p></div>
+              </div>
+             
+              <a className="mcu-story-website" href="https://mcu.edu.ph" target="_blank" rel="noreferrer">Visit the MCU official website <ArrowRight size={17} /></a>
+            </section>
+          </article>
+        </div>
+      )}
+
       <footer>
         <div className="footer-brand">
-          <span className="brand-mark"><Building2 size={21} /></span>
-          <div>
-            <strong>MCU All-in-One</strong>
-            <span>Manila Central University</span>
-          </div>
+          <img className="mcu-official-logo" src="/images/mcu-logo-purple.png" alt="Manila Central University" />
         </div>
         <p>© {new Date().getFullYear()} Manila Central University. All rights reserved.</p>
         <div className="footer-links">

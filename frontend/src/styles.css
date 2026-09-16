@@ -29,12 +29,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   background: var(--background);
+  overflow-x: clip;
 }
 
 button,
@@ -72,8 +74,14 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
   margin-right: auto;
+}
+
+.mcu-official-logo {
+  display: block;
+  width: 172px;
+  height: auto;
+  object-fit: contain;
 }
 
 .brand-mark {
@@ -358,6 +366,20 @@ a {
 .quick-links {
   display: grid;
   gap: 9px;
+  animation: quick-access-slide-up 520ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.quick-links .quick-link:nth-child(2) {
+  animation: quick-access-slide-up 520ms 55ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.quick-links .quick-link:nth-child(3) {
+  animation: quick-access-slide-up 520ms 110ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes quick-access-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .quick-link {
@@ -398,7 +420,7 @@ a {
 
 .quick-link small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .quick-link > svg {
@@ -435,11 +457,12 @@ a {
   z-index: -3;
   inset: 18px -8vw 24px;
   background:
-    radial-gradient(circle at 12% 20%, rgba(8, 170, 189, .13), transparent 25%),
-    radial-gradient(circle at 86% 22%, rgba(242, 15, 91, .1), transparent 24%),
-    radial-gradient(circle at 72% 84%, rgba(255, 186, 46, .12), transparent 25%),
-    radial-gradient(circle at 28% 78%, rgba(100, 43, 135, .12), transparent 26%);
-  background-size: 120% 120%;
+    radial-gradient(circle at 10% 16%, rgba(8, 170, 189, .24), transparent 29%),
+    radial-gradient(circle at 91% 16%, rgba(242, 15, 91, .16), transparent 27%),
+    radial-gradient(circle at 76% 88%, rgba(255, 212, 0, .20), transparent 28%),
+    radial-gradient(circle at 25% 82%, rgba(100, 43, 135, .18), transparent 31%),
+    linear-gradient(135deg, #f4fdfe 0%, #fbf8fc 44%, #fff9ec 100%);
+  background-size: 130% 130%;
   border-radius: 40px;
   animation: mesh-shift 14s ease-in-out infinite alternate;
 }
@@ -449,8 +472,8 @@ a {
   position: absolute;
   z-index: -2;
   inset: 18px -8vw 24px;
-  opacity: .25;
-  background-image: radial-gradient(rgba(100, 43, 135, .24) .8px, transparent .8px);
+  opacity: .34;
+  background-image: radial-gradient(rgba(100, 43, 135, .30) .8px, transparent .8px);
   background-size: 25px 25px;
   border-radius: 40px;
   mask-image: linear-gradient(to bottom, transparent, black 18%, black 80%, transparent);
@@ -618,6 +641,33 @@ a {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+}
+
+.global-directory-toolbar,
+.global-site-grid {
+  display: none;
+}
+
+.service-category-groups {
+  display: grid;
+  gap: 36px;
+  margin-top: 34px;
+}
+
+.service-category-group {
+  min-width: 0;
+}
+
+.category-group-toolbar {
+  margin: 0 0 28px;
+}
+
+.category-group-toolbar .filters button:not(.selected) {
+  color: #64748b;
+}
+
+.category-site-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .site-card {
@@ -903,6 +953,190 @@ a {
 
 .session-timeout-warning { position: fixed; z-index: 1000; top: 24px; left: 50%; display: grid; grid-template-columns: auto auto; gap: 3px 18px; min-width: min(440px, calc(100vw - 32px)); padding: 15px 16px; color: #3b154c; background: #fff; border: 1px solid #ead9ef; border-left: 4px solid var(--orange); border-radius: 14px; box-shadow: 0 18px 45px rgba(48,0,69,.2); transform: translateX(-50%); animation: session-warning-in 220ms ease both; }.session-timeout-warning strong { font-size: 14px; }.session-timeout-warning span { grid-column: 1; color: #796c80; font-size: 12px; }.session-timeout-warning button { grid-column: 2; grid-row: 1 / span 2; align-self: center; padding: 9px 12px; color: white; background: var(--violet); border: 0; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; }.session-timeout-warning button:hover { background: var(--primary-dark); }@keyframes session-warning-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }@media (max-width: 560px) { .session-timeout-warning { top: 14px; grid-template-columns: 1fr; min-width: calc(100vw - 28px); }.session-timeout-warning button { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 6px; } }
 
+/* Public website layout: desktop uses the full hero and service-directory design. */
+@media (min-width: 701px) {
+  .mobile-app-shell {
+    display: none;
+  }
+
+  .app {
+    display: block;
+  }
+}
+
+/* Keep the public website layout consistent from desktop down to small phones. */
+@media (max-width: 700px) {
+  .mobile-app-shell {
+    display: none !important;
+  }
+
+  .app {
+    display: block !important;
+  }
+
+  .mcu-official-logo {
+    width: 142px;
+  }
+
+  .footer-brand .mcu-official-logo {
+    width: 174px;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-header {
+    padding: 0 16px;
+  }
+
+  .mcu-official-logo {
+    width: 126px;
+  }
+
+  .hero {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .hero h1 {
+    font-size: 37px;
+  }
+
+  .hero-panel,
+  .about-card {
+    padding: 20px;
+  }
+
+  .quick-link {
+    padding: 10px;
+  }
+
+  .quick-link small {
+    font-size: 10px;
+  }
+
+  .directory-section,
+  .about-section {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  footer {
+    gap: 16px;
+    padding: 20px 16px;
+  }
+}
+
+.story-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.mcu-story-backdrop {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(31, 0, 47, .68);
+  backdrop-filter: blur(10px);
+  animation: story-backdrop-in 180ms ease;
+}
+
+.mcu-story-modal {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(280px, .85fr) minmax(420px, 1.15fr);
+  width: min(100%, 1120px);
+  max-height: min(760px, calc(100vh - 56px));
+  overflow: auto;
+  color: var(--secondary);
+  background: white;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 28px;
+  box-shadow: 0 34px 90px rgba(20, 0, 32, .42);
+  animation: story-modal-in 240ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.mcu-story-close {
+  position: absolute;
+  z-index: 1;
+  top: 20px;
+  right: 20px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--violet);
+  background: rgba(255, 255, 255, .9);
+  border: 1px solid #eadfee;
+  border-radius: 13px;
+  box-shadow: 0 8px 20px rgba(48, 0, 69, .1);
+  cursor: pointer;
+}
+
+.mcu-story-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: 58px 44px;
+  color: white;
+  background: radial-gradient(circle at 14% 10%, rgba(8, 170, 189, .35), transparent 34%), radial-gradient(circle at 90% 92%, rgba(242, 15, 91, .25), transparent 37%), linear-gradient(145deg, #300045, #57217a);
+}
+
+.mcu-story-hero .section-kicker { color: #ffe28a; }
+.mcu-story-hero .live-pulse { background: var(--cyan); }
+.mcu-story-hero h2 { margin: 16px 0; font: 800 clamp(38px, 4vw, 57px)/.98 "Manrope", sans-serif; letter-spacing: -.065em; }
+.mcu-story-hero h2 span { color: var(--accent); }
+.mcu-story-hero > p { max-width: 370px; margin: 0; color: #f1deff; font-size: 15px; line-height: 1.7; }
+
+.mcu-story-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 38px; }
+.mcu-story-stat-grid div { display: grid; gap: 4px; padding: 13px 8px; background: rgba(255, 255, 255, .11); border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; }
+.mcu-story-stat-grid strong { color: var(--accent); font: 800 20px "Manrope", sans-serif; }
+.mcu-story-stat-grid span { color: #f2dfff; font-size: 10px; line-height: 1.25; }
+
+.mcu-story-content { padding: 57px 48px 42px; background: radial-gradient(circle at 100% 0, rgba(242, 15, 91, .08), transparent 35%), #fff; }
+.mcu-story-section-head > span { color: var(--violet); font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+.mcu-story-section-head h3 { margin: 8px 0 7px; font: 800 28px "Manrope", sans-serif; letter-spacing: -.045em; }
+.mcu-story-section-head p { max-width: 500px; margin: 0; color: #796e80; font-size: 13px; line-height: 1.6; }
+
+.mcu-story-timeline { display: grid; gap: 14px; margin: 29px 0; }
+.mcu-story-timeline > div { display: grid; grid-template-columns: 50px 18px 1fr; gap: 12px; align-items: start; }
+.mcu-story-timeline b { color: var(--violet); font: 800 13px "Manrope", sans-serif; }
+.mcu-story-timeline span { position: relative; width: 12px; height: 12px; margin-top: 2px; background: var(--accent); border: 3px solid #fff5d7; border-radius: 50%; box-shadow: 0 0 0 1px #ffcb4d; }
+.mcu-story-timeline > div:not(:last-child) span::after { content: ""; position: absolute; top: 12px; left: 4px; width: 2px; height: 31px; background: #eadcee; }
+.mcu-story-timeline p { margin: 0; color: #817487; font-size: 12px; line-height: 1.5; }
+.mcu-story-timeline strong { display: block; margin-bottom: 2px; color: var(--secondary); font-size: 13px; }
+
+.mcu-story-values { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.mcu-story-values div { display: grid; grid-template-columns: auto 1fr; column-gap: 9px; align-items: center; padding: 13px; background: #fbf8fc; border: 1px solid #eee4f1; border-radius: 13px; }
+.mcu-story-values svg { grid-row: 1 / span 2; color: var(--violet); }
+.mcu-story-values strong { font-size: 12px; }
+.mcu-story-values span { color: #887b90; font-size: 10px; }
+.mcu-story-website { display: inline-flex; align-items: center; gap: 8px; margin-top: 25px; padding: 12px 15px; color: white; background: var(--violet); border-radius: 10px; font-size: 12px; font-weight: 800; }
+.mcu-story-website:hover { background: var(--primary-dark); }
+
+@keyframes story-backdrop-in { from { opacity: 0; } }
+@keyframes story-modal-in { from { opacity: 0; transform: translateY(20px) scale(.98); } }
+
+@media (max-width: 760px) {
+  .mcu-story-backdrop { place-items: end center; padding: 12px; }
+  .mcu-story-modal { display: block; max-height: calc(100vh - 24px); border-radius: 22px; }
+  .mcu-story-hero { min-height: auto; padding: 42px 25px 30px; }
+  .mcu-story-hero h2 { font-size: 39px; }
+  .mcu-story-stat-grid { margin-top: 26px; }
+  .mcu-story-content { padding: 28px 25px; }
+  .mcu-story-close { top: 13px; right: 13px; width: 38px; height: 38px; }
+}
+
+@media (max-width: 390px) {
+  .mcu-story-values { grid-template-columns: 1fr; }
+  .mcu-story-stat-grid strong { font-size: 17px; }
+}
+
 .about-section {
   padding: 0 28px 90px;
 }
@@ -1003,7 +1237,7 @@ footer {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 25px;
-  padding: 30px max(5vw, 28px);
+  padding: 14px max(5vw, 28px);
   background: white;
   border-top: 1px solid var(--border);
 }
@@ -1012,6 +1246,10 @@ footer {
   display: flex;
   align-items: center;
   gap: 11px;
+}
+
+.footer-brand .mcu-official-logo {
+  width: 190px;
 }
 
 .footer-brand .brand-mark {

@@ -94,10 +94,23 @@ function MetricCard({ tone, icon: Icon, label, value, children }) {
   );
 }
 
-function ServiceModal({ service, onClose, onSave }) {
+function ServiceModal({ service, categories, onClose, onSave }) {
   const [form, setForm] = useState(service ? { ...service } : emptyForm);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // A native select visually shows its first option when its value is absent,
+  // but it does not change React form state. Keep the submitted category in
+  // sync with the active categories supplied by the API.
+  useEffect(() => {
+    if (service || !categories.length) return;
+    setForm((current) => (
+      categories.some((item) => item.name === current.category)
+        ? current
+        : { ...current, category: categories[0].name }
+    ));
+  }, [categories, service]);
+
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: "" }));
@@ -125,7 +138,7 @@ function ServiceModal({ service, onClose, onSave }) {
         </div>
         <div className="form-grid">
           <label className={`full ${errors.title ? "has-error" : ""}`}>Service name<input value={form.title} onChange={(e) => update("title", e.target.value)} aria-invalid={Boolean(errors.title)} placeholder="e.g. Student Portal" />{errors.title && <small className="field-error">{errors.title}</small>}</label>
-          <label>Category<select value={form.category} onChange={(e) => update("category", e.target.value)}>{["University","Students","Academics","Healthcare","Corporate","Community"].map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label className={errors.category ? "has-error" : ""}>Category<select value={form.category} onChange={(e) => update("category", e.target.value)} aria-invalid={Boolean(errors.category)}>{categories.map((item) => <option value={item.name} key={item.id || item.name}>{item.name}</option>)}</select>{errors.category && <small className="field-error">{errors.category}</small>}</label>
           <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
           <label className={`full ${errors.url ? "has-error" : ""}`}>Website URL<input value={form.url === "#" ? "" : form.url} onChange={(e) => update("url", e.target.value)} type="text" aria-invalid={Boolean(errors.url)} placeholder="https://www.example.com" />{errors.url && <small className="field-error">{errors.url}</small>}</label>
           <label className={`full ${errors.description ? "has-error" : ""}`}>Description<textarea value={form.description} onChange={(e) => update("description", e.target.value)} aria-invalid={Boolean(errors.description)} rows="3" />{errors.description && <small className="field-error">{errors.description}</small>}</label>
@@ -201,15 +214,17 @@ function Dashboard() {
   const [toast, setToast] = useState("");
   const [dashboard, setDashboard] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [serviceCategories, setServiceCategories] = useState([]);
 
   async function loadServices() {
     try {
-      const [serviceData, dashboardData, profileData] = await Promise.all([adminApi.getServices(), adminApi.getDashboard(), adminApi.getCurrentUser()]);
+      const [serviceData, dashboardData, profileData, categoryData] = await Promise.all([adminApi.getServices(), adminApi.getDashboard(), adminApi.getCurrentUser(), adminApi.getCategories()]);
       setServices(serviceData);
       setDashboard(dashboardData);
       setCurrentUser(profileData.user);
+      setServiceCategories(categoryData.filter((item) => item.status === "active"));
     }
-    catch (error) { if (error.status === 401) window.location.href = "/login"; else showToast(error.message); }
+    catch (error) { if (error.status === 401) window.location.href = "/login?returnTo=/admin"; else showToast(error.message); }
   }
   useEffect(() => { loadServices(); }, []);
   function showToast(message) { setToast(message); setTimeout(() => setToast(""), 2400); }
@@ -250,7 +265,7 @@ function Dashboard() {
         </section>
       </main>
     </div>
-    {modalOpen && <ServiceModal service={modalService} onClose={() => setModalOpen(false)} onSave={save} />}
+    {modalOpen && <ServiceModal service={modalService} categories={serviceCategories.length ? serviceCategories : [{ id: "university", name: "University" }]} onClose={() => setModalOpen(false)} onSave={save} />}
     <div className={`toast ${toast ? "show" : ""}`} role="status">{toast}</div>
   </div>;
 }

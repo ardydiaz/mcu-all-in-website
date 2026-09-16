@@ -36,7 +36,7 @@ export default function Login() {
     }
     if (loginState !== "success") return undefined;
     const requestedNext = parameters.get("next");
-    const next = requestedNext?.startsWith("/") ? requestedNext : "/";
+    const next = requestedNext?.startsWith("/admin") ? requestedNext : "/admin";
     setLoginSuccess(true);
     const timeout = window.setTimeout(() => window.location.replace(next), 1600);
     return () => window.clearTimeout(timeout);
@@ -45,7 +45,7 @@ export default function Login() {
   function signInWithMicrosoft() {
     setStarting(true);
     const requestedReturn = new URLSearchParams(window.location.search).get("returnTo");
-    const returnTo = requestedReturn?.startsWith("/") ? requestedReturn : "/";
+    const returnTo = requestedReturn?.startsWith("/admin") ? requestedReturn : "/admin";
     window.location.href = `/api/auth/microsoft?returnTo=${encodeURIComponent(returnTo)}`;
   }
 

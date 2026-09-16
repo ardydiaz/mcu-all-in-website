@@ -32,7 +32,7 @@ export default function AdminLayout() {
   useEffect(() => {
     if (location.pathname === "/admin") return;
     adminApi.getCurrentUser().then((result) => setUser(result.user)).catch((error) => {
-      if (error.status === 401) window.location.href = "/login";
+      if (error.status === 401) window.location.href = `/login?returnTo=${encodeURIComponent(location.pathname)}`;
     });
   }, [location.pathname]);
 
