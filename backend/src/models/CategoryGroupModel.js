@@ -3,7 +3,25 @@ import { isDatabaseEnabled, query } from "../config/database.js";
 const selectGroups = `SELECT id, name, slug, description, display_order AS displayOrder,
   status, created_at AS createdAt, updated_at AS updatedAt FROM category_groups`;
 
+const slugify = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "group";
+
 export const CategoryGroupModel = {
+  async create(payload) {
+    const name = String(payload.name).trim();
+    const result = await query(
+      "INSERT INTO category_groups (name, slug, description, display_order, status) VALUES (?, ?, ?, ?, ?)",
+      [name, `${slugify(name)}-${Date.now()}`, payload.description || null, Number(payload.displayOrder) || 0, payload.status === "inactive" ? "inactive" : "active"]
+    );
+    return this.findById(result.insertId);
+  },
+
+  async remove(id) {
+    const current = await this.findById(id);
+    if (!current) return null;
+    await query("DELETE FROM category_groups WHERE id = ?", [id]);
+    return current;
+  },
+
   async all({ includeInactive = false } = {}) {
     if (!isDatabaseEnabled()) return [];
     const rows = await query(

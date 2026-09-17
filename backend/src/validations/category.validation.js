@@ -1,4 +1,5 @@
 import { isNonEmpty } from "../utils/validator.js";
-export const categoryValidation = (body) => !isNonEmpty(body.name)
-  ? [{ field: "name", message: "Category name is required." }]
-  : [];
+export const categoryValidation = (body) => [
+  ...(!isNonEmpty(body.name) ? [{ field: "name", message: "Category name is required." }] : []),
+  ...(!body.categoryGroupId ? [{ field: "categoryGroupId", message: "Category group is required." }] : []),
+];

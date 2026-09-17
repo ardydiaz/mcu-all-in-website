@@ -10,4 +10,13 @@ export const CategoryGroupController = {
     const group = await CategoryGroupModel.withTabs(request.params.id);
     group ? response.json(group) : response.status(404).json({ message: "Group not found." });
   },
+
+  async store(request, response) {
+    response.status(201).json(await CategoryGroupModel.create(request.body));
+  },
+
+  async destroy(request, response) {
+    const removed = await CategoryGroupModel.remove(request.params.id);
+    removed ? response.status(204).end() : response.status(404).json({ message: "Group not found." });
+  },
 };
