@@ -79,6 +79,7 @@ function Home() {
   const [recentSites, setRecentSites] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [groups, setGroups] = useState([]);
+  const [groupTabSelections, setGroupTabSelections] = useState({});
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [directoryOpen, setDirectoryOpen] = useState(false);
@@ -286,10 +287,25 @@ function Home() {
           })).filter((tab) => tab.sites.length > 0),
         };
       } else {
-        // Group without tabs: show all services in group under "All"
+        // Group without tabs: show "All" and group name as tabs
+        const groupNameServices = sites.filter((site) => {
+          const inGroup = site.category === group.name;
+          const queryMatches =
+            !normalizedQuery ||
+            `${site.title} ${site.description} ${site.category}`
+              .toLowerCase()
+              .includes(normalizedQuery);
+          return inGroup && queryMatches;
+        });
+
         return {
           ...group,
-          tabs: allGroupSites.length > 0 ? [{ name: "All", id: `${group.id}-all`, sites: allGroupSites }] : [],
+          tabs: allGroupSites.length > 0
+            ? [
+                { name: "All", id: `${group.id}-all`, sites: allGroupSites },
+                { name: group.name, id: `${group.id}-group`, sites: groupNameServices }
+              ]
+            : [],
         };
       }
     }).filter((group) => group.tabs.length > 0);
@@ -498,36 +514,45 @@ function Home() {
             {groupedByTabStructure.map((group) => (
               <section className="service-category-group" key={group.name} aria-label={`${group.name} services`}>
                 <h3 style={{ marginBottom: "16px", fontSize: "18px", fontWeight: "600" }}>{group.name}</h3>
-                <div className="directory-toolbar category-group-toolbar">
-                  {group.tabs && group.tabs.length > 1 && (
-                    <div className="filters" aria-label={`Filter ${group.name} services`}>
-                      <button className={category === "All" ? "selected" : ""} onClick={() => setCategory("All")}>All</button>
-                      {group.tabs.filter(t => t.name !== "All").map((tab) => (
-                        <button
-                          key={tab.id}
-                          className={category === tab.name ? "selected" : ""}
-                          onClick={() => setCategory(tab.name)}
-                        >
-                          {tab.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <span className="result-count"><strong>{group.tabs.reduce((sum, tab) => sum + tab.sites.length, 0)}</strong> connected services</span>
-                </div>
-                <div className="site-grid category-site-grid">
-                  {group.tabs.flatMap((tab) =>
-                    tab.sites.map((site, index) => {
-                      const Icon = site.icon;
-                      return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
-                        <span className="card-accent" aria-hidden="true" />
-                        <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
-                        <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
-                        <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
-                      </a>;
-                    })
-                  )}
-                </div>
+                {(() => {
+                  const activeTab = groupTabSelections[group.name] || "All";
+                  const matchingTabs = group.tabs.filter((tab) => activeTab === "All" || activeTab === tab.name);
+                  const uniqueSites = Array.from(
+                    new Map(matchingTabs.flatMap((tab) => tab.sites).map((site) => [site.id || site.title, site])).values()
+                  );
+                  return (
+                    <>
+                      <div className="directory-toolbar category-group-toolbar">
+                        {group.tabs && group.tabs.length > 0 && (
+                          <div className="filters" aria-label={`Filter ${group.name} services`}>
+                            <button className={activeTab === "All" ? "selected" : ""} onClick={() => setGroupTabSelections((current) => ({ ...current, [group.name]: "All" }))}>All</button>
+                            {group.tabs.filter(t => t.name !== "All").map((tab) => (
+                              <button
+                                key={tab.id}
+                                className={activeTab === tab.name ? "selected" : ""}
+                                onClick={() => setGroupTabSelections((current) => ({ ...current, [group.name]: tab.name }))}
+                              >
+                                {tab.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <span className="result-count"><strong>{uniqueSites.length}</strong> connected services</span>
+                      </div>
+                      <div className="site-grid category-site-grid">
+                        {uniqueSites.map((site, index) => {
+                          const Icon = site.icon;
+                          return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
+                            <span className="card-accent" aria-hidden="true" />
+                            <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
+                            <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
+                            <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
+                          </a>;
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </section>
             ))}
           </div>
