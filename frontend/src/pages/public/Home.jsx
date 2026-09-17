@@ -71,13 +71,13 @@ function formatAnnouncementDate(value) {
 function Home() {
   const [query, setQuery] = useState("");
   const [quickQuery, setQuickQuery] = useState("");
-  const [selectedGroupName, setSelectedGroupName] = useState(null);
-  const [selectedTabName, setSelectedTabName] = useState(null);
+  const [category, setCategory] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loginModal, setLoginModal] = useState(null);
   const [sites, setSites] = useState([]);
   const [recentSites, setRecentSites] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
   const [groups, setGroups] = useState([]);
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -193,8 +193,14 @@ function Home() {
           icon: iconsByCategory[system.category] || BookOpen,
         })));
         setGroups(apiGroups);
-        setSelectedGroupName(apiGroups[0]?.name || null);
-        setSelectedTabName("All");
+        // Extract all category names from groups for backward compatibility with filters
+        const allCategoryNames = new Set();
+        apiGroups.forEach(g => {
+          g.tabs?.forEach(t => allCategoryNames.add(t.name));
+        });
+        const nextCategories = ["All", ...Array.from(allCategoryNames)];
+        setCategories(nextCategories);
+        setCategory((current) => nextCategories.includes(current) ? current : "All");
       })
       .catch((error) => setCatalogError(error.message))
       .finally(() => setCatalogLoading(false));
@@ -218,47 +224,42 @@ function Home() {
     };
   }, [loadDirectory, loadAnnouncements]);
 
-  const currentGroup = useMemo(() => {
-    return groups.find((g) => g.name === selectedGroupName);
-  }, [groups, selectedGroupName]);
-
   const filteredSites = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
-    if (!currentGroup) return [];
-
-    const allTabNames = currentGroup.tabs.map((t) => t.name);
     return sites.filter((site) => {
-      const inCurrentGroup = allTabNames.includes(site.category);
-      const tabMatches = !selectedTabName || selectedTabName === "All" || site.category === selectedTabName;
+      const categoryMatches = category === "All" || site.category === category;
       const queryMatches =
         !normalizedQuery ||
         `${site.title} ${site.description} ${site.category}`
           .toLowerCase()
           .includes(normalizedQuery);
-      return inCurrentGroup && tabMatches && queryMatches;
+      return categoryMatches && queryMatches;
     });
-  }, [sites, currentGroup, selectedTabName, query]);
+  }, [sites, category, query]);
 
-  const groupedAndTabbed = useMemo(() => {
-    if (!currentGroup) return [];
+  const categoryGroups = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
+    const names = categories
+      .filter((item) => item !== "All" && (category === "All" || item === category))
+      .sort((first, second) => {
+        const firstIndex = directoryCategoryOrder.indexOf(first);
+        const secondIndex = directoryCategoryOrder.indexOf(second);
+        const safeFirstIndex = firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex;
+        const safeSecondIndex = secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex;
+        return safeFirstIndex - safeSecondIndex || first.localeCompare(second);
+      });
+    return names.map((name) => ({
+      name,
+      sites: sites.filter((site) => site.category === name && (!normalizedQuery || `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery))),
+    })).filter((group) => group.sites.length > 0);
+  }, [sites, categories, category, query]);
 
-    if (currentGroup.tabs && currentGroup.tabs.length > 0) {
-      return currentGroup.tabs.map((tab) => ({
-        name: tab.name,
-        sites: sites.filter((site) => {
-          const inTab = site.category === tab.name;
-          const queryMatches =
-            !normalizedQuery ||
-            `${site.title} ${site.description} ${site.category}`
-              .toLowerCase()
-              .includes(normalizedQuery);
-          return inTab && queryMatches;
-        }),
-      })).filter((tab) => tab.sites.length > 0);
-    } else {
-      const groupSites = sites.filter((site) => {
-        const inGroup = site.category === currentGroup.name;
+  const groupedByTabStructure = useMemo(() => {
+    const normalizedQuery = query.toLowerCase().trim();
+    return groups.map((group) => {
+      // Get all sites in this group first
+      const allGroupSites = sites.filter((site) => {
+        const inGroup = site.category === group.name || (group.tabs && group.tabs.some(t => t.name === site.category));
         const queryMatches =
           !normalizedQuery ||
           `${site.title} ${site.description} ${site.category}`
@@ -266,9 +267,33 @@ function Home() {
             .includes(normalizedQuery);
         return inGroup && queryMatches;
       });
-      return groupSites.length > 0 ? [{ name: currentGroup.name, sites: groupSites }] : [];
-    }
-  }, [sites, currentGroup, query]);
+
+      if (group.tabs && group.tabs.length > 0) {
+        // Group with tabs: organize by tab
+        return {
+          ...group,
+          tabs: group.tabs.map((tab) => ({
+            ...tab,
+            sites: sites.filter((site) => {
+              const inTab = site.category === tab.name;
+              const queryMatches =
+                !normalizedQuery ||
+                `${site.title} ${site.description} ${site.category}`
+                  .toLowerCase()
+                  .includes(normalizedQuery);
+              return inTab && queryMatches;
+            }),
+          })).filter((tab) => tab.sites.length > 0),
+        };
+      } else {
+        // Group without tabs: show all services in group under "All"
+        return {
+          ...group,
+          tabs: allGroupSites.length > 0 ? [{ name: "All", id: `${group.id}-all`, sites: allGroupSites }] : [],
+        };
+      }
+    }).filter((group) => group.tabs.length > 0);
+  }, [sites, groups, query]);
 
   const quickSites = useMemo(() => {
     const normalizedQuery = quickQuery.toLowerCase().trim();
@@ -470,52 +495,52 @@ function Home() {
           </div>
 
           <div className="service-category-groups">
-            {groupedAndTabbed.map((tabGroup) => (
-              <section className="service-category-group" key={tabGroup.name} aria-label={`${tabGroup.name} services`}>
+            {groupedByTabStructure.map((group) => (
+              <section className="service-category-group" key={group.name} aria-label={`${group.name} services`}>
+                <h3 style={{ marginBottom: "16px", fontSize: "18px", fontWeight: "600" }}>{group.name}</h3>
                 <div className="directory-toolbar category-group-toolbar">
-                  {currentGroup?.tabs && currentGroup.tabs.length > 0 && (
-                    <div className="filters" aria-label={`Filter ${currentGroup?.name} services`}>
-                      <button className={!selectedTabName || selectedTabName === "All" ? "selected" : ""} onClick={() => setSelectedTabName("All")}>All</button>
-                      {currentGroup?.tabs.map((tab) => (
+                  {group.tabs && group.tabs.length > 1 && (
+                    <div className="filters" aria-label={`Filter ${group.name} services`}>
+                      <button className={category === "All" ? "selected" : ""} onClick={() => setCategory("All")}>All</button>
+                      {group.tabs.filter(t => t.name !== "All").map((tab) => (
                         <button
                           key={tab.id}
-                          className={selectedTabName === tab.name ? "selected" : ""}
-                          onClick={() => setSelectedTabName(tab.name)}
+                          className={category === tab.name ? "selected" : ""}
+                          onClick={() => setCategory(tab.name)}
                         >
                           {tab.name}
                         </button>
                       ))}
                     </div>
                   )}
-                  <span className="result-count"><strong>{tabGroup.sites.length}</strong> connected services</span>
+                  <span className="result-count"><strong>{group.tabs.reduce((sum, tab) => sum + tab.sites.length, 0)}</strong> connected services</span>
                 </div>
                 <div className="site-grid category-site-grid">
-                  {tabGroup.sites.map((site, index) => {
-                    const Icon = site.icon;
-                    return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
-                      <span className="card-accent" aria-hidden="true" />
-                      <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
-                      <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
-                      <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
-                    </a>;
-                  })}
+                  {group.tabs.flatMap((tab) =>
+                    tab.sites.map((site, index) => {
+                      const Icon = site.icon;
+                      return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
+                        <span className="card-accent" aria-hidden="true" />
+                        <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
+                        <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
+                        <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
+                      </a>;
+                    })
+                  )}
                 </div>
               </section>
             ))}
           </div>
 
           <div className="directory-toolbar global-directory-toolbar">
-            <div className="filters" aria-label="Filter by category group">
-              {groups.map((group) => (
+            <div className="filters" aria-label="Filter services">
+              {categories.map((item) => (
                 <button
-                  key={group.id}
-                  className={selectedGroupName === group.name ? "selected" : ""}
-                  onClick={() => {
-                    setSelectedGroupName(group.name);
-                    setSelectedTabName("All");
-                  }}
+                  key={item}
+                  className={category === item ? "selected" : ""}
+                  onClick={() => setCategory(item)}
                 >
-                  {group.name}
+                  {item}
                 </button>
               ))}
             </div>
