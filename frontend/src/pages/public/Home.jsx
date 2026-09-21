@@ -348,6 +348,37 @@ function Home() {
     if (site.href !== "#") window.open(site.href, "_blank", "noopener,noreferrer");
   };
 
+  const renderSiteCard = (site, index) => {
+    const Icon = site.icon;
+    if (site.links && site.links.length > 0) {
+      return (
+        <div className={`site-card site-card-${site.tone} site-card-hub`} key={site.id || site.title} style={{ "--card-index": index }}>
+          <span className="card-accent" aria-hidden="true" />
+          <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span></div>
+          <span className="category-label">{(site.categories || [site.category]).join(", ")}</span>
+          <h3>{site.title}</h3>
+          <p>{site.description}</p>
+          <div className="hub-link-grid">
+            {site.links.map((link) => (
+              <a key={link.label} href={link.url} target="_blank" rel="noreferrer" className="hub-link-icon" title={link.label}>
+                <img src={`/images/m365/${link.icon}.png`} alt={link.label} />
+                <small>{link.label}</small>
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
+        <span className="card-accent" aria-hidden="true" />
+        <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
+        <span className="category-label">{(site.categories || [site.category]).join(", ")}</span><h3>{site.title}</h3><p>{site.description}</p>
+        <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
+      </a>
+    );
+  };
+
   const continueWithMicrosoft = () => {
     if (!loginModal) return;
     sessionStorage.setItem("mcu_pending_service", loginModal.href);
@@ -557,15 +588,7 @@ function Home() {
                         <span className="result-count"><strong>{uniqueSites.length}</strong> connected services</span>
                       </div>
                       <div className="site-grid category-site-grid">
-                        {uniqueSites.map((site, index) => {
-                          const Icon = site.icon;
-                          return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
-                            <span className="card-accent" aria-hidden="true" />
-                            <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
-                            <span className="category-label">{(site.categories || [site.category]).join(", ")}</span><h3>{site.title}</h3><p>{site.description}</p>
-                            <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
-                          </a>;
-                        })}
+                        {uniqueSites.map((site, index) => renderSiteCard(site, index))}
                       </div>
                     </>
                   );
@@ -592,35 +615,7 @@ function Home() {
           </div>
 
           <div className="site-grid global-site-grid">
-            {filteredSites.map((site, index) => {
-              const Icon = site.icon;
-              return (
-                <a
-                  className={`site-card site-card-${site.tone}`}
-                  href={site.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  key={site.title}
-                  style={{ "--card-index": index }}
-                  onClick={(event) => openService(event, site)}
-                >
-                  <span className="card-accent" aria-hidden="true" />
-                  <div className="card-top">
-                    <span className={`site-icon ${site.tone}`}>
-                      <Icon size={24} />
-                    </span>
-                    <ExternalLink className="external-icon" size={18} />
-                  </div>
-                  <span className="category-label">{(site.categories || [site.category]).join(", ")}</span>
-                  <h3>{site.title}</h3>
-                  <p>{site.description}</p>
-                  <span className="card-link">
-                    <span>Visit website</span>
-                    <span className="arrow-bubble"><ArrowRight size={15} /></span>
-                  </span>
-                </a>
-              );
-            })}
+            {filteredSites.map((site, index) => renderSiteCard(site, index))}
           </div>
 
           {catalogLoading && sites.length === 0 && (

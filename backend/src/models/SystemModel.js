@@ -4,7 +4,7 @@ import { normalizeText, toIsoDate } from "../utils/formatter.js";
 
 const collection = "services";
 const CATEGORY_SEPARATOR = "";
-const selectSystems = `SELECT s.id, s.name AS title, c.name AS category, s.description, s.url,
+const selectSystems = `SELECT s.id, s.name AS title, c.name AS category, s.description, s.url, s.links,
   s.status, s.color, s.created_at AS createdAt, s.updated_at AS updatedAt,
   s.deleted_at AS deletedAt, s.deleted_by AS deletedBy,
   GROUP_CONCAT(DISTINCT cat.name ORDER BY cat.name SEPARATOR '${CATEGORY_SEPARATOR}') AS categoryNames
@@ -12,7 +12,7 @@ const selectSystems = `SELECT s.id, s.name AS title, c.name AS category, s.descr
   INNER JOIN categories c ON c.id = s.category_id
   LEFT JOIN system_categories sc ON sc.system_id = s.id
   LEFT JOIN categories cat ON cat.id = sc.category_id`;
-const groupBySystems = "GROUP BY s.id, s.name, c.name, s.description, s.url, s.status, s.color, s.created_at, s.updated_at, s.deleted_at, s.deleted_by";
+const groupBySystems = "GROUP BY s.id, s.name, c.name, s.description, s.url, s.links, s.status, s.color, s.created_at, s.updated_at, s.deleted_at, s.deleted_by";
 
 const slugify = (value) => normalizeText(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "system";
 
@@ -103,7 +103,7 @@ export const SystemModel = {
     const item = normalize(payload);
     await assertNoDuplicate({ name: item.title, url: item.url });
     const categoryIds = await categoryIdsFor(item.categories);
-    const result = await query("INSERT INTO systems (category_id, name, slug, description, url, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)", [categoryIds[0], item.title, `${slugify(item.title)}-${Date.now()}`, item.description, item.url, item.color, item.status]);
+    const result = await query("INSERT INTO systems (category_id, name, slug, description, url, links, color, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [categoryIds[0], item.title, `${slugify(item.title)}-${Date.now()}`, item.description, item.url, JSON.stringify(item.links), item.color, item.status]);
     await syncCategories(result.insertId, categoryIds);
     return this.findById(result.insertId);
   },
@@ -113,7 +113,7 @@ export const SystemModel = {
     const item = normalize(payload, current);
     await assertNoDuplicate({ name: item.title, url: item.url, excludeId: id });
     const categoryIds = await categoryIdsFor(item.categories);
-    await query("UPDATE systems SET category_id = ?, name = ?, description = ?, url = ?, color = ?, status = ? WHERE id = ?", [categoryIds[0], item.title, item.description, item.url, item.color, item.status, id]);
+    await query("UPDATE systems SET category_id = ?, name = ?, description = ?, url = ?, links = ?, color = ?, status = ? WHERE id = ?", [categoryIds[0], item.title, item.description, item.url, JSON.stringify(item.links), item.color, item.status, id]);
     await syncCategories(id, categoryIds);
     return this.findById(id);
   },
@@ -131,7 +131,15 @@ export const SystemModel = {
   },
 };
 
+function normalizeLinks(links) {
+  if (!Array.isArray(links) || !links.length) return null;
+  return links
+    .filter((link) => link && link.label && link.url)
+    .map((link) => ({ label: normalizeText(link.label), icon: link.icon, url: normalizeText(link.url) }));
+}
+
 function normalize(payload, base = {}) {
   const categories = payload.categories ?? (payload.category ? [payload.category] : base.categories ?? ["University"]);
-  return { ...base, title: normalizeText(payload.title ?? base.title), categories, category: categories[0], description: normalizeText(payload.description ?? base.description), url: normalizeText(payload.url ?? base.url ?? "#"), status: payload.status === "inactive" ? "inactive" : "active", color: normalizeText(payload.color ?? base.color ?? "violet") };
+  const links = payload.links !== undefined ? normalizeLinks(payload.links) : (base.links ?? null);
+  return { ...base, title: normalizeText(payload.title ?? base.title), categories, category: categories[0], description: normalizeText(payload.description ?? base.description), url: normalizeText(payload.url ?? base.url ?? "#"), links, status: payload.status === "inactive" ? "inactive" : "active", color: normalizeText(payload.color ?? base.color ?? "violet") };
 }

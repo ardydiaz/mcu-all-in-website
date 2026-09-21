@@ -12,9 +12,22 @@ const palette = {
   cyan: "#08AABD", lime: "#B6D83E", yellow: "#FFD400",
 };
 
+const linkIcons = [
+  { key: "m365", label: "Microsoft 365" },
+  { key: "word", label: "Word" },
+  { key: "excel", label: "Excel" },
+  { key: "powerpoint", label: "PowerPoint" },
+  { key: "outlook", label: "Outlook" },
+  { key: "onedrive", label: "OneDrive" },
+  { key: "onenote", label: "OneNote" },
+  { key: "teams", label: "Teams" },
+  { key: "sharepoint", label: "SharePoint" },
+  { key: "yammer", label: "Yammer" },
+];
+
 const emptyForm = {
   title: "", categories: [], status: "active", url: "",
-  description: "", color: "violet",
+  description: "", color: "violet", links: [],
 };
 
 function initialsFor(user) {
@@ -95,7 +108,7 @@ function MetricCard({ tone, icon: Icon, label, value, children }) {
 }
 
 function ServiceModal({ service, categories, onClose, onSave }) {
-  const [form, setForm] = useState(service ? { ...service, categories: service.categories || (service.category ? [service.category] : []) } : emptyForm);
+  const [form, setForm] = useState(service ? { ...service, categories: service.categories || (service.category ? [service.category] : []), links: service.links || [] } : emptyForm);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -112,6 +125,22 @@ function ServiceModal({ service, categories, onClose, onSave }) {
         : [...current.categories, name],
     }));
     setErrors((current) => ({ ...current, categories: "" }));
+  };
+
+  const addLink = () => {
+    setForm((current) => ({ ...current, links: [...current.links, { icon: linkIcons[0].key, label: "", url: "" }] }));
+  };
+
+  const updateLink = (index, key, value) => {
+    setForm((current) => ({
+      ...current,
+      links: current.links.map((link, i) => (i === index ? { ...link, [key]: value } : link)),
+    }));
+    setErrors((current) => ({ ...current, links: "" }));
+  };
+
+  const removeLink = (index) => {
+    setForm((current) => ({ ...current, links: current.links.filter((_, i) => i !== index) }));
   };
 
   async function submit(event) {
@@ -156,6 +185,24 @@ function ServiceModal({ service, categories, onClose, onSave }) {
           <fieldset className="full"><legend>Accent color</legend><div className="color-options">
             {Object.entries(palette).map(([name, color]) => <label className="color-option" title={name} key={name}><input type="radio" name="color" value={name} checked={form.color === name} onChange={() => update("color", name)} /><span style={{ "--swatch": color }} /></label>)}
           </div></fieldset>
+          <fieldset className={`full ${errors.links ? "has-error" : ""}`}>
+            <legend>Quick links (optional)</legend>
+            <p className="field-hint">Add per-icon shortcuts inside this card, e.g. a Microsoft 365 hub with separate Word/Excel/Outlook links. Leave empty for a normal single-link card.</p>
+            <div className="quick-link-rows">
+              {form.links.map((link, index) => (
+                <div className="quick-link-row" key={index}>
+                  <select value={link.icon} onChange={(e) => updateLink(index, "icon", e.target.value)}>
+                    {linkIcons.map((icon) => <option value={icon.key} key={icon.key}>{icon.label}</option>)}
+                  </select>
+                  <input value={link.label} onChange={(e) => updateLink(index, "label", e.target.value)} placeholder="Label (e.g. Word)" />
+                  <input value={link.url} onChange={(e) => updateLink(index, "url", e.target.value)} placeholder="https://word.office.com" />
+                  <button type="button" className="quick-link-remove" onClick={() => removeLink(index)} aria-label={`Remove link ${index + 1}`}><X size={14} /></button>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="quick-link-add" onClick={addLink}><Plus size={14} />Add link</button>
+            {errors.links && <small className="field-error">{errors.links}</small>}
+          </fieldset>
         </div>
         {errors.form && <p className="modal-form-error">{errors.form}</p>}<div className="modal-actions"><button type="button" className="cancel-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={saving}>{saving ? "Saving..." : "Save service"}</button></div>
       </form>

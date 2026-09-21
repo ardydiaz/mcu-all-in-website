@@ -134,6 +134,14 @@ fieldset { margin: 0; padding: 0; border: 0; } legend { margin-bottom: 8px; colo
 .category-checkbox input:checked ~ .check-indicator svg { opacity: 1; transform: scale(1); }
 .category-checkbox:has(input:checked) { color: var(--purple); background: rgba(100,43,135,.07); border-color: var(--violet); }
 fieldset.has-error .category-checklist { padding: 9px; background: #fff8f9; border: 1px solid var(--red); border-radius: 10px; box-shadow: 0 0 0 3px rgba(245,34,45,.1); }
+.quick-link-rows { display: grid; gap: 8px; margin-bottom: 10px; }
+.quick-link-row { display: grid; grid-template-columns: 130px 1fr 1fr auto; gap: 8px; align-items: center; }
+.quick-link-row select, .quick-link-row input { padding: 9px 10px; color: var(--purple); background: #fbfafc; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; outline: 0; }
+.quick-link-row select:focus, .quick-link-row input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(100,43,135,.08); }
+.quick-link-remove { width: 32px; height: 32px; display: grid; place-items: center; color: #bd2c4b; background: #fff0f3; border: 0; border-radius: 8px; flex-shrink: 0; }
+.quick-link-add { display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; color: var(--violet); background: #f5eef8; border: 1px dashed #d9c6e3; border-radius: 9px; font-size: 11px; font-weight: 700; }
+.quick-link-add:hover { background: #eee1f4; }
+@media (max-width: 620px) { .quick-link-row { grid-template-columns: 1fr; } }
 .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }.cancel-button { padding: 0 16px; color: #6d6174; background: white; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; font-weight: 700; }
 .toast { position: fixed; top: 24px; left: 50%; z-index: 120; min-width: 260px; padding: 13px 18px; color: white; background: var(--purple); border-left: 4px solid var(--orange); border-radius: 10px; box-shadow: 0 14px 35px rgba(48,0,69,.25); font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none; transform: translate(-50%, -16px); transition: 220ms ease; }.toast.show { opacity: 1; transform: translate(-50%, 0); }
 
