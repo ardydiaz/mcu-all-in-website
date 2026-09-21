@@ -192,7 +192,10 @@ a {
   overflow: hidden;
   padding: 75px max(7vw, 40px) 82px;
   color: white;
-  background: var(--secondary);
+  background:
+    linear-gradient(115deg, rgba(46,0,70,.93) 0%, rgba(92,41,124,.86) 40%, rgba(104,38,114,.62) 72%, rgba(255,183,54,.30) 100%),
+    url("/images/mcu_banner_1.jpg") center 68% / cover no-repeat,
+    var(--secondary);
 }
 
 .hero-grid {
