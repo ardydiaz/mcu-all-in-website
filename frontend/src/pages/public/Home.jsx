@@ -304,6 +304,27 @@ function Home() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const targets = document.querySelectorAll(".reveal, .site-card");
+    if (!targets.length) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      targets.forEach((el) => el.classList.add("is-visible"));
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
+    );
+    targets.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [groupedByTabStructure, filteredSites]);
+
   const sidebarRecentSites = currentUser && recentSites.length ? recentSites : quickSites.slice(0, 3);
   const sidebarRecentTitle = currentUser && recentSites.length ? "Recently visited" : "Recently added";
 
@@ -485,7 +506,7 @@ function Home() {
         <section className="directory-section" id="directory">
           <div className="directory-orb directory-orb-one" aria-hidden="true" />
           <div className="directory-orb directory-orb-two" aria-hidden="true" />
-          <div className="section-heading">
+          <div className="section-heading reveal">
             <div>
               <span className="section-kicker">
                 <span className="live-pulse" />
@@ -621,7 +642,7 @@ function Home() {
         </section>
 
         <section className="about-section" id="about">
-          <div className="about-card">
+          <div className="about-card reveal">
             <div className="about-icon"><Landmark size={30} /></div>
             <div>
               <span className="section-kicker">SINCE 1904</span>
@@ -638,7 +659,7 @@ function Home() {
           </div>
         </section>
 
-        <section className="support-strip" id="support">
+        <section className="support-strip reveal" id="support">
           <div>
             <span className="support-icon"><CircleHelp size={23} /></span>
             <div>
