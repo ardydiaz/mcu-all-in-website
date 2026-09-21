@@ -20,14 +20,14 @@ async function categoryIdFor(category) {
   return rows[0].id;
 }
 
-async function assertNoDuplicate({ url, excludeId = null }) {
-  const params = [url];
-  let sql = "SELECT id, name FROM systems WHERE deleted_at IS NULL AND LOWER(url) = LOWER(?)";
+async function assertNoDuplicate({ name, url, excludeId = null }) {
+  const params = [name, url];
+  let sql = "SELECT id, name FROM systems WHERE deleted_at IS NULL AND (LOWER(name) = LOWER(?) OR LOWER(url) = LOWER(?))";
   if (excludeId) { sql += " AND id != ?"; params.push(excludeId); }
   sql += " LIMIT 1";
   const [duplicate] = await query(sql, params);
   if (duplicate) {
-    const error = new Error(`This URL is already used by \"${duplicate.name}\". Edit that entry instead of adding the same service again under another category.`);
+    const error = new Error(`A service named \"${duplicate.name}\" already exists. A service can only belong to one category — edit that entry instead of adding it again under another category.`);
     error.status = 409;
     throw error;
   }
@@ -71,7 +71,7 @@ export const SystemModel = {
   async create(payload) {
     if (!isDatabaseEnabled()) return jsonModel.create(payload);
     const item = normalize(payload);
-    await assertNoDuplicate({ url: item.url });
+    await assertNoDuplicate({ name: item.title, url: item.url });
     const categoryId = await categoryIdFor(item.category);
     const result = await query("INSERT INTO systems (category_id, name, slug, description, url, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)", [categoryId, item.title, `${slugify(item.title)}-${Date.now()}`, item.description, item.url, item.color, item.status]);
     return this.findById(result.insertId);
@@ -80,7 +80,7 @@ export const SystemModel = {
     if (!isDatabaseEnabled()) return jsonModel.update(id, payload);
     const current = await this.findById(id); if (!current || current.deletedAt) return null;
     const item = normalize(payload, current);
-    await assertNoDuplicate({ url: item.url, excludeId: id });
+    await assertNoDuplicate({ name: item.title, url: item.url, excludeId: id });
     const categoryId = await categoryIdFor(item.category);
     await query("UPDATE systems SET category_id = ?, name = ?, description = ?, url = ?, color = ?, status = ? WHERE id = ?", [categoryId, item.title, item.description, item.url, item.color, item.status, id]);
     return this.findById(id);
