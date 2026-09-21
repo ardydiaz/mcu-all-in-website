@@ -769,7 +769,7 @@ a {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--card-color, var(--primary)) 0%, var(--card-color, var(--primary)) 40%, transparent 100%);
+  background: var(--card-color, var(--primary));
   transition: height 260ms ease, box-shadow 260ms ease;
 }
 
