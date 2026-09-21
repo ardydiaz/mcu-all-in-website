@@ -242,7 +242,7 @@ a {
   width: 280px;
   height: 280px;
   opacity: .6;
-  background-image: radial-gradient(rgba(255, 183, 54, .55) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(rgba(210, 149, 40, .6) 1.5px, transparent 1.5px);
   background-size: 17px 17px;
   mask-image: radial-gradient(circle at top left, black, transparent 70%);
   -webkit-mask-image: radial-gradient(circle at top left, black, transparent 70%);
