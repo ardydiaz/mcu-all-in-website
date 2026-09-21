@@ -137,11 +137,13 @@ function ServiceModal({ service, categories, onClose, onSave }) {
         <div className="form-grid">
           <label className={`full ${errors.title ? "has-error" : ""}`}>Service name<input value={form.title} onChange={(e) => update("title", e.target.value)} aria-invalid={Boolean(errors.title)} placeholder="e.g. Student Portal" />{errors.title && <small className="field-error">{errors.title}</small>}</label>
           <fieldset className={`full ${errors.categories ? "has-error" : ""}`}>
-            <legend>Categories (select one or more)</legend>
-            <div className="color-options">
+            <legend>Categories</legend>
+            <p className="field-hint">Select one or more — a service can appear under every tab it belongs to.</p>
+            <div className="category-checklist">
               {categories.map((item) => (
-                <label key={item.id || item.name} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 400 }}>
+                <label className="category-checkbox" key={item.id || item.name}>
                   <input type="checkbox" checked={form.categories.includes(item.name)} onChange={() => toggleCategory(item.name)} />
+                  <span className="check-indicator"><Check size={11} /></span>
                   {item.name}
                 </label>
               ))}
