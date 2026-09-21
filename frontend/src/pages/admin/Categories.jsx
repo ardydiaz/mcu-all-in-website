@@ -117,17 +117,20 @@ export default function Categories() {
         </div>
         <div className="category-grid">
           {groups.map((group) => (
-            <article key={group.id} style={{ flexDirection: "column", alignItems: "stretch", gap: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <strong>{group.name}</strong>
-                <button onClick={() => removeGroup(group)} aria-label={`Delete group ${group.name}`}><Trash2 size={16} /></button>
+            <article className="category-structure-card" key={group.id}>
+              <div className="category-structure-header">
+                <div className="category-structure-heading">
+                  <span><Layers size={16} /></span>
+                  <strong>{group.name}</strong>
+                </div>
+                <button className="category-structure-delete" onClick={() => removeGroup(group)} aria-label={`Delete group ${group.name}`}><Trash2 size={15} /></button>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {(group.tabs || []).length === 0 && <small>No tabs yet — add one above.</small>}
+              <div className="category-structure-tabs">
+                {(group.tabs || []).length === 0 && <small className="category-structure-empty">No tabs yet — add one above.</small>}
                 {(group.tabs || []).map((tab) => (
-                  <span key={tab.id} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", borderRadius: "999px", background: "#f1f0fb" }}>
+                  <span className="category-structure-tab" key={tab.id}>
                     {tab.name}
-                    <button onClick={() => removeTab(tab)} aria-label={`Delete tab ${tab.name}`} style={{ display: "inline-flex" }}><Trash2 size={12} /></button>
+                    <button onClick={() => removeTab(tab)} aria-label={`Delete tab ${tab.name}`}><Trash2 size={11} /></button>
                   </span>
                 ))}
               </div>
