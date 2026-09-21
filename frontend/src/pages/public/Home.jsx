@@ -66,8 +66,14 @@ function formatAnnouncementDate(value) {
   return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
+const heroPhotos = [
+  { src: "/images/mcu_banner_1.jpg", position: "center 18%" },
+  { src: "/images/mcu_banner_2.jpg", position: "center 62%" },
+];
+
 function Home() {
   const [query, setQuery] = useState("");
+  const [heroPhotoIndex, setHeroPhotoIndex] = useState(0);
   const [quickQuery, setQuickQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -292,6 +298,11 @@ function Home() {
     return () => window.clearInterval(timer);
   }, [sites.length]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setHeroPhotoIndex((index) => (index + 1) % heroPhotos.length), 8000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const sidebarRecentSites = currentUser && recentSites.length ? recentSites : quickSites.slice(0, 3);
   const sidebarRecentTitle = currentUser && recentSites.length ? "Recently visited" : "Recently added";
 
@@ -385,6 +396,13 @@ function Home() {
 
       <main>
         <section className="hero">
+          {heroPhotos.map((photo, index) => (
+            <div
+              key={photo.src}
+              className={`hero-photo ${index === heroPhotoIndex ? "is-active" : ""}`}
+              style={{ backgroundImage: `url(${photo.src})`, backgroundPosition: photo.position }}
+            />
+          ))}
           <div className="hero-glow hero-glow-one" />
           <div className="hero-glow hero-glow-two" />
           <div className="hero-grid" />

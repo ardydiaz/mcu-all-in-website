@@ -182,20 +182,41 @@ a {
 }
 
 .hero {
-  position: relative;
-  isolation: isolate;
-  min-height: 550px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.72fr);
-  align-items: center;
-  gap: 7vw;
-  overflow: hidden;
-  padding: 75px max(7vw, 40px) 82px;
-  color: white;
-  background:
-    linear-gradient(115deg, rgba(46,0,70,.93) 0%, rgba(92,41,124,.86) 40%, rgba(104,38,114,.62) 72%, rgba(255,183,54,.30) 100%),
-    url("/images/mcu_banner_1.jpg") center 18% / cover no-repeat,
-    var(--secondary);
+    position: relative;
+    isolation: isolate;
+    min-height: 550px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.72fr);
+    align-items: center;
+    gap: 7vw;
+    overflow: hidden;
+    padding: 75px max(7vw, 40px) 82px;
+    color: white;
+    background: var(--secondary);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background: linear-gradient(115deg, rgb(58 0 89 / 93%) 0%, rgb(56 0 91 / 88%) 40%, rgb(35 1 41 / 70%) 72%, rgb(251 162 2 / 48%) 100%);
+  pointer-events: none;
+}
+
+.hero-photo {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1400ms ease;
+  pointer-events: none;
+}
+
+.hero-photo.is-active {
+  opacity: 1;
 }
 
 .hero-grid {
