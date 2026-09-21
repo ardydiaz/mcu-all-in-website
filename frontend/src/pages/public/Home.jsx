@@ -415,8 +415,8 @@ function Home() {
                 <stop offset="100%" stopColor="#491464" />
               </linearGradient>
               <linearGradient id="heroWaveGold" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#ad7300" />
-                <stop offset="100%" stopColor="#d29528" />
+                <stop offset="0%" stopColor="#d29528" />
+                <stop offset="100%" stopColor="#fdc131" />
               </linearGradient>
             </defs>
             <path d="M0,150 C260,210 500,90 760,130 C1000,170 1220,110 1440,150 L1440,220 L0,220 Z" fill="url(#heroWavePurple)" opacity="0.92" />
