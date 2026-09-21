@@ -388,6 +388,21 @@ function Home() {
           <div className="hero-glow hero-glow-one" />
           <div className="hero-glow hero-glow-two" />
           <div className="hero-grid" />
+          <div className="hero-dot-texture" />
+          <svg className="hero-wave" viewBox="0 0 1440 220" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="heroWavePurple" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#2e0046" />
+                <stop offset="100%" stopColor="#5c297c" />
+              </linearGradient>
+              <linearGradient id="heroWaveGold" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#ffb736" />
+                <stop offset="100%" stopColor="#ffd62e" />
+              </linearGradient>
+            </defs>
+            <path d="M0,150 C260,210 500,90 760,130 C1000,170 1220,110 1440,150 L1440,220 L0,220 Z" fill="url(#heroWavePurple)" opacity="0.85" />
+            <path d="M0,120 C240,180 480,40 720,90 C960,140 1200,60 1440,110 L1440,220 L0,220 Z" fill="url(#heroWaveGold)" opacity="0.5" />
+          </svg>
           <div className="hero-content">
             <div className="eyebrow">
               <Sparkles size={15} />
