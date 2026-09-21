@@ -69,6 +69,7 @@ function formatAnnouncementDate(value) {
 const heroPhotos = [
   { src: "/images/mcu_banner_1.jpg", position: "center 18%" },
   { src: "/images/mcu_banner_2.jpg", position: "center 62%" },
+  { src: "/images/mcu_banner_3.jpg", position: "center 58%" },
 ];
 
 function Home() {
