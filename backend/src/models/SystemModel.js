@@ -11,9 +11,9 @@ const selectSystems = `SELECT s.id, s.name AS title, c.name AS category, s.descr
 const slugify = (value) => normalizeText(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "system";
 
 async function categoryIdFor(category) {
-  const rows = await query("SELECT id FROM categories WHERE name = ? AND deleted_at IS NULL LIMIT 1", [category]);
+  const rows = await query("SELECT id FROM categories WHERE name = ? AND deleted_at IS NULL AND is_tab = TRUE LIMIT 1", [category]);
   if (!rows[0]) {
-    const error = new Error(`Category \"${category}\" was not found.`);
+    const error = new Error(`\"${category}\" is not an assignable tab. Choose one of the categories created under Admin → Categories.`);
     error.status = 422;
     throw error;
   }
