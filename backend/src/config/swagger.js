@@ -9,7 +9,7 @@ export const swaggerDocument = {
     version: "1.0.0",
     description: "Interactive API documentation for the MCU public directory and administration portal.",
   },
-  servers: [{ url: "http://localhost:3000/api", description: "Local development" }],
+  servers: [{ url: "http://localhost:3005/api", description: "Local development" }],
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },

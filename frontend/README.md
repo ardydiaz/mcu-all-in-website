@@ -9,8 +9,8 @@ npm install
 npm run dev
 ```
 
-The development command starts both the Express API on port `3000` and Vite
-on port `5180`. The React admin interface is available at `/admin`. Use
+The development command starts both the Express API on port `3005` and Vite
+on port `5002`. The React admin interface is available at `/admin`. Use
 `npm run dev:web` only when the API is already running.
 
 ## Build

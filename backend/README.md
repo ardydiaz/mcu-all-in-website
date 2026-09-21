@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-The API runs at `http://localhost:3000`. The React administration interface
+The API runs at `http://localhost:3005`. The React administration interface
 is located in `frontend/src/pages/admin`.
 
 Service changes are stored in `data/services.json`.
@@ -19,7 +19,7 @@ Service changes are stored in `data/services.json`.
 
 1. Create a Microsoft Entra application registration.
 2. Add the Web redirect URI
-   `http://localhost:3000/api/auth/microsoft/callback`.
+   `http://localhost:3005/api/auth/microsoft/callback`.
 3. Add Microsoft Graph delegated permission `User.Read`.
 4. Create a client secret.
 5. Copy `.env.example` to `.env` and supply the tenant, client, secret, and
@@ -40,9 +40,9 @@ Microsoft-only.
 
 ## API documentation (Swagger)
 
-With the API running, open `http://localhost:3000/api/docs` for the interactive
+With the API running, open `http://localhost:3005/api/docs` for the interactive
 Swagger UI. The OpenAPI document is also available at
-`http://localhost:3000/api/openapi.json`.
+`http://localhost:3005/api/openapi.json`.
 
 To test protected endpoints, first call `POST /api/login` in development,
 copy the returned `token`, select **Authorize** in Swagger, and paste the JWT.

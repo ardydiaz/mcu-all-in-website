@@ -2,7 +2,7 @@ import app from "./app.js";
 import { connectDatabase } from "./config/database.js";
 import { logger } from "./helpers/logger.js";
 
-const port = Number(process.env.PORT) || 3000;
+const port = Number(process.env.PORT) || 3005;
 
 try {
   const database = await connectDatabase();
