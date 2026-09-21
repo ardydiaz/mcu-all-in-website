@@ -419,8 +419,8 @@ function Home() {
                 <stop offset="100%" stopColor="#fdc131" />
               </linearGradient>
             </defs>
-            <path d="M0,150 C260,210 500,90 760,130 C1000,170 1220,110 1440,150 L1440,220 L0,220 Z" fill="url(#heroWavePurple)" opacity="0.92" />
-            <path d="M0,120 C240,180 480,40 720,90 C960,140 1200,60 1440,110 L1440,220 L0,220 Z" fill="url(#heroWaveGold)" opacity="0.55" />
+            <path d="M0,150 C260,210 500,90 760,130 C1000,170 1220,110 1440,150 L1440,220 L0,220 Z" fill="url(#heroWavePurple)" />
+            <path d="M0,110 C240,170 480,30 720,80 C960,130 1200,50 1440,100 L1440,120 C1200,70 960,150 720,100 C480,50 240,190 0,130 Z" fill="url(#heroWaveGold)" />
           </svg>
           <div className="hero-content">
             <div className="eyebrow">
