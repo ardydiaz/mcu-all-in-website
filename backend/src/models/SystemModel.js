@@ -3,21 +3,41 @@ import { isDatabaseEnabled, query, readCollection, writeCollection } from "../co
 import { normalizeText, toIsoDate } from "../utils/formatter.js";
 
 const collection = "services";
+const CATEGORY_SEPARATOR = "";
 const selectSystems = `SELECT s.id, s.name AS title, c.name AS category, s.description, s.url,
   s.status, s.color, s.created_at AS createdAt, s.updated_at AS updatedAt,
-  s.deleted_at AS deletedAt, s.deleted_by AS deletedBy
-  FROM systems s INNER JOIN categories c ON c.id = s.category_id`;
+  s.deleted_at AS deletedAt, s.deleted_by AS deletedBy,
+  GROUP_CONCAT(DISTINCT cat.name ORDER BY cat.name SEPARATOR '${CATEGORY_SEPARATOR}') AS categoryNames
+  FROM systems s
+  INNER JOIN categories c ON c.id = s.category_id
+  LEFT JOIN system_categories sc ON sc.system_id = s.id
+  LEFT JOIN categories cat ON cat.id = sc.category_id`;
+const groupBySystems = "GROUP BY s.id, s.name, c.name, s.description, s.url, s.status, s.color, s.created_at, s.updated_at, s.deleted_at, s.deleted_by";
 
 const slugify = (value) => normalizeText(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "system";
 
-async function categoryIdFor(category) {
-  const rows = await query("SELECT id FROM categories WHERE name = ? AND deleted_at IS NULL AND is_tab = TRUE LIMIT 1", [category]);
-  if (!rows[0]) {
-    const error = new Error(`\"${category}\" is not an assignable tab. Choose one of the categories created under Admin → Categories.`);
+function mapRow(row) {
+  if (!row) return row;
+  const { categoryNames, ...rest } = row;
+  return { ...rest, categories: categoryNames ? categoryNames.split(CATEGORY_SEPARATOR) : [row.category] };
+}
+
+async function categoryIdsFor(categoryNames) {
+  const names = [...new Set((Array.isArray(categoryNames) ? categoryNames : [categoryNames]).map((name) => normalizeText(name)).filter(Boolean))];
+  if (!names.length) {
+    const error = new Error("Select at least one category.");
     error.status = 422;
     throw error;
   }
-  return rows[0].id;
+  const placeholders = names.map(() => "?").join(", ");
+  const rows = await query(`SELECT id, name FROM categories WHERE is_tab = TRUE AND deleted_at IS NULL AND name IN (${placeholders})`, names);
+  const missing = names.filter((name) => !rows.some((row) => row.name === name));
+  if (missing.length) {
+    const error = new Error(`\"${missing[0]}\" is not an assignable tab. Choose one of the categories created under Admin → Categories.`);
+    error.status = 422;
+    throw error;
+  }
+  return rows.map((row) => row.id);
 }
 
 async function assertNoDuplicate({ name, url, excludeId = null }) {
@@ -27,10 +47,18 @@ async function assertNoDuplicate({ name, url, excludeId = null }) {
   sql += " LIMIT 1";
   const [duplicate] = await query(sql, params);
   if (duplicate) {
-    const error = new Error(`A service named \"${duplicate.name}\" already exists. A service can only belong to one category — edit that entry instead of adding it again under another category.`);
+    const error = new Error(`A service named \"${duplicate.name}\" already exists. Edit that entry and add more categories to it instead of creating a new one.`);
     error.status = 409;
     throw error;
   }
+}
+
+async function syncCategories(systemId, categoryIds) {
+  await query("DELETE FROM system_categories WHERE system_id = ?", [systemId]);
+  if (!categoryIds.length) return;
+  const values = categoryIds.map(() => "(?, ?)").join(", ");
+  const params = categoryIds.flatMap((categoryId) => [systemId, categoryId]);
+  await query(`INSERT INTO system_categories (system_id, category_id) VALUES ${values}`, params);
 }
 
 const jsonModel = {
@@ -62,18 +90,21 @@ const jsonModel = {
 export const SystemModel = {
   async all({ includeDeleted = false } = {}) {
     if (!isDatabaseEnabled()) return jsonModel.all({ includeDeleted });
-    return query(`${selectSystems} ${includeDeleted ? "" : "WHERE s.deleted_at IS NULL"} ORDER BY s.display_order, s.name`);
+    const rows = await query(`${selectSystems} ${includeDeleted ? "" : "WHERE s.deleted_at IS NULL"} ${groupBySystems} ORDER BY s.display_order, s.name`);
+    return rows.map(mapRow);
   },
   async findById(id) {
     if (!isDatabaseEnabled()) return jsonModel.findById(id);
-    const rows = await query(`${selectSystems} WHERE s.id = ? LIMIT 1`, [id]); return rows[0] || null;
+    const rows = await query(`${selectSystems} WHERE s.id = ? ${groupBySystems} LIMIT 1`, [id]);
+    return mapRow(rows[0]) || null;
   },
   async create(payload) {
     if (!isDatabaseEnabled()) return jsonModel.create(payload);
     const item = normalize(payload);
     await assertNoDuplicate({ name: item.title, url: item.url });
-    const categoryId = await categoryIdFor(item.category);
-    const result = await query("INSERT INTO systems (category_id, name, slug, description, url, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)", [categoryId, item.title, `${slugify(item.title)}-${Date.now()}`, item.description, item.url, item.color, item.status]);
+    const categoryIds = await categoryIdsFor(item.categories);
+    const result = await query("INSERT INTO systems (category_id, name, slug, description, url, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)", [categoryIds[0], item.title, `${slugify(item.title)}-${Date.now()}`, item.description, item.url, item.color, item.status]);
+    await syncCategories(result.insertId, categoryIds);
     return this.findById(result.insertId);
   },
   async update(id, payload) {
@@ -81,8 +112,9 @@ export const SystemModel = {
     const current = await this.findById(id); if (!current || current.deletedAt) return null;
     const item = normalize(payload, current);
     await assertNoDuplicate({ name: item.title, url: item.url, excludeId: id });
-    const categoryId = await categoryIdFor(item.category);
-    await query("UPDATE systems SET category_id = ?, name = ?, description = ?, url = ?, color = ?, status = ? WHERE id = ?", [categoryId, item.title, item.description, item.url, item.color, item.status, id]);
+    const categoryIds = await categoryIdsFor(item.categories);
+    await query("UPDATE systems SET category_id = ?, name = ?, description = ?, url = ?, color = ?, status = ? WHERE id = ?", [categoryIds[0], item.title, item.description, item.url, item.color, item.status, id]);
+    await syncCategories(id, categoryIds);
     return this.findById(id);
   },
   async softDelete(id, deletedBy = null) {
@@ -100,5 +132,6 @@ export const SystemModel = {
 };
 
 function normalize(payload, base = {}) {
-  return { ...base, title: normalizeText(payload.title ?? base.title), category: normalizeText(payload.category ?? base.category ?? "University"), description: normalizeText(payload.description ?? base.description), url: normalizeText(payload.url ?? base.url ?? "#"), status: payload.status === "inactive" ? "inactive" : "active", color: normalizeText(payload.color ?? base.color ?? "violet") };
+  const categories = payload.categories ?? (payload.category ? [payload.category] : base.categories ?? ["University"]);
+  return { ...base, title: normalizeText(payload.title ?? base.title), categories, category: categories[0], description: normalizeText(payload.description ?? base.description), url: normalizeText(payload.url ?? base.url ?? "#"), status: payload.status === "inactive" ? "inactive" : "active", color: normalizeText(payload.color ?? base.color ?? "violet") };
 }

@@ -45,8 +45,6 @@ const tonesByColor = {
   pink: "pink",
 };
 
-const directoryCategoryOrder = ["Student Faculty", "Administrator", "External Affairs"];
-
 function ExternalLinkAction() {
   return <span className="external-link-action" aria-hidden="true"><ExternalLink size={20} /></span>;
 }
@@ -225,48 +223,28 @@ function Home() {
     };
   }, [loadDirectory, loadAnnouncements]);
 
+  const siteMatchesQuery = (site, normalizedQuery) =>
+    !normalizedQuery ||
+    `${site.title} ${site.description} ${(site.categories || [site.category]).join(" ")}`
+      .toLowerCase()
+      .includes(normalizedQuery);
+
   const filteredSites = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
     return sites.filter((site) => {
-      const categoryMatches = category === "All" || site.category === category;
-      const queryMatches =
-        !normalizedQuery ||
-        `${site.title} ${site.description} ${site.category}`
-          .toLowerCase()
-          .includes(normalizedQuery);
-      return categoryMatches && queryMatches;
+      const categoryMatches = category === "All" || (site.categories || [site.category]).includes(category);
+      return categoryMatches && siteMatchesQuery(site, normalizedQuery);
     });
   }, [sites, category, query]);
-
-  const categoryGroups = useMemo(() => {
-    const normalizedQuery = query.toLowerCase().trim();
-    const names = categories
-      .filter((item) => item !== "All" && (category === "All" || item === category))
-      .sort((first, second) => {
-        const firstIndex = directoryCategoryOrder.indexOf(first);
-        const secondIndex = directoryCategoryOrder.indexOf(second);
-        const safeFirstIndex = firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex;
-        const safeSecondIndex = secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex;
-        return safeFirstIndex - safeSecondIndex || first.localeCompare(second);
-      });
-    return names.map((name) => ({
-      name,
-      sites: sites.filter((site) => site.category === name && (!normalizedQuery || `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery))),
-    })).filter((group) => group.sites.length > 0);
-  }, [sites, categories, category, query]);
 
   const groupedByTabStructure = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
     return groups.map((group) => {
       // Get all sites in this group first
       const allGroupSites = sites.filter((site) => {
-        const inGroup = site.category === group.name || (group.tabs && group.tabs.some(t => t.name === site.category));
-        const queryMatches =
-          !normalizedQuery ||
-          `${site.title} ${site.description} ${site.category}`
-            .toLowerCase()
-            .includes(normalizedQuery);
-        return inGroup && queryMatches;
+        const siteCategories = site.categories || [site.category];
+        const inGroup = siteCategories.includes(group.name) || (group.tabs && group.tabs.some((t) => siteCategories.includes(t.name)));
+        return inGroup && siteMatchesQuery(site, normalizedQuery);
       });
 
       if (group.tabs && group.tabs.length > 0) {
@@ -275,28 +253,12 @@ function Home() {
           ...group,
           tabs: group.tabs.map((tab) => ({
             ...tab,
-            sites: sites.filter((site) => {
-              const inTab = site.category === tab.name;
-              const queryMatches =
-                !normalizedQuery ||
-                `${site.title} ${site.description} ${site.category}`
-                  .toLowerCase()
-                  .includes(normalizedQuery);
-              return inTab && queryMatches;
-            }),
+            sites: sites.filter((site) => (site.categories || [site.category]).includes(tab.name) && siteMatchesQuery(site, normalizedQuery)),
           })).filter((tab) => tab.sites.length > 0),
         };
       } else {
         // Group without tabs: show "All" and group name as tabs
-        const groupNameServices = sites.filter((site) => {
-          const inGroup = site.category === group.name;
-          const queryMatches =
-            !normalizedQuery ||
-            `${site.title} ${site.description} ${site.category}`
-              .toLowerCase()
-              .includes(normalizedQuery);
-          return inGroup && queryMatches;
-        });
+        const groupNameServices = sites.filter((site) => (site.categories || [site.category]).includes(group.name) && siteMatchesQuery(site, normalizedQuery));
 
         return {
           ...group,
@@ -314,7 +276,7 @@ function Home() {
   const quickSites = useMemo(() => {
     const normalizedQuery = quickQuery.toLowerCase().trim();
     if (!normalizedQuery) return sites;
-    return sites.filter((site) => `${site.title} ${site.description} ${site.category}`.toLowerCase().includes(normalizedQuery));
+    return sites.filter((site) => siteMatchesQuery(site, normalizedQuery));
   }, [sites, quickQuery]);
 
   const heroQuickSites = useMemo(() => {
@@ -385,9 +347,9 @@ function Home() {
         <label className="desktop-directory-search"><Search size={20} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label>
         <div className="desktop-directory-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
         <div className="desktop-directory-label"><strong>{category === "All" ? "All services" : category}</strong><span>{filteredSites.length} services</span></div>
-        <div className="desktop-directory-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={24} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}{!catalogLoading && !filteredSites.length && <p className="desktop-directory-empty">No matching services found.</p>}</div>
+        <div className="desktop-directory-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={24} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{(site.categories || [site.category]).join(", ")}</em></div><ExternalLinkAction /></button>; })}{!catalogLoading && !filteredSites.length && <p className="desktop-directory-empty">No matching services found.</p>}</div>
       </section>
-      {directoryOpen && <div className="service-directory-overlay" onMouseDown={(event) => event.target === event.currentTarget && setDirectoryOpen(false)}><section className="service-directory-modal"><div className="service-directory-modal-head"><div><span className="section-kicker"><i /> MCU DIGITAL ECOSYSTEM</span><h2>All services</h2><p>{filteredSites.length} connected MCU services</p></div><button onClick={() => setDirectoryOpen(false)} aria-label="Close directory"><X size={22} /></button></div><label className="service-directory-modal-search"><Search size={20} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label><div className="service-directory-modal-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="service-directory-modal-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{site.category}</em></div><ExternalLinkAction /></button>; })}</div></section></div>}
+      {directoryOpen && <div className="service-directory-overlay" onMouseDown={(event) => event.target === event.currentTarget && setDirectoryOpen(false)}><section className="service-directory-modal"><div className="service-directory-modal-head"><div><span className="section-kicker"><i /> MCU DIGITAL ECOSYSTEM</span><h2>All services</h2><p>{filteredSites.length} connected MCU services</p></div><button onClick={() => setDirectoryOpen(false)} aria-label="Close directory"><X size={22} /></button></div><label className="service-directory-modal-search"><Search size={20} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MCU services..." /></label><div className="service-directory-modal-filters">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="service-directory-modal-list">{filteredSites.map((site) => { const Icon = site.icon; return <button key={site.id || site.title} onClick={(event) => openService(event, site)}><span className={site.tone}><Icon size={22} /></span><div><strong>{site.title}</strong><small>{site.description}</small><em>{(site.categories || [site.category]).join(", ")}</em></div><ExternalLinkAction /></button>; })}</div></section></div>}
       <nav className="mobile-bottom-nav"><button className="active"><House size={20} />Home</button><button onClick={showAllServices}><Search size={20} />Directory</button><a href="/" onClick={promptPublicSignIn}><ShieldCheck size={20} />Sign in</a></nav>
     </div>
     <div className="app">
@@ -545,7 +507,7 @@ function Home() {
                           return <a className={`site-card site-card-${site.tone}`} href={site.href} target="_blank" rel="noreferrer" key={site.id || site.title} style={{ "--card-index": index }} onClick={(event) => openService(event, site)}>
                             <span className="card-accent" aria-hidden="true" />
                             <div className="card-top"><span className={`site-icon ${site.tone}`}><Icon size={24} /></span><ExternalLink className="external-icon" size={18} /></div>
-                            <span className="category-label">{site.category}</span><h3>{site.title}</h3><p>{site.description}</p>
+                            <span className="category-label">{(site.categories || [site.category]).join(", ")}</span><h3>{site.title}</h3><p>{site.description}</p>
                             <span className="card-link"><span>Visit website</span><span className="arrow-bubble"><ArrowRight size={15} /></span></span>
                           </a>;
                         })}
@@ -594,7 +556,7 @@ function Home() {
                     </span>
                     <ExternalLink className="external-icon" size={18} />
                   </div>
-                  <span className="category-label">{site.category}</span>
+                  <span className="category-label">{(site.categories || [site.category]).join(", ")}</span>
                   <h3>{site.title}</h3>
                   <p>{site.description}</p>
                   <span className="card-link">

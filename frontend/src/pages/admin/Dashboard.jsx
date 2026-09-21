@@ -13,7 +13,7 @@ const palette = {
 };
 
 const emptyForm = {
-  title: "", category: "University", status: "active", url: "",
+  title: "", categories: [], status: "active", url: "",
   description: "", color: "violet",
 };
 
@@ -95,25 +95,23 @@ function MetricCard({ tone, icon: Icon, label, value, children }) {
 }
 
 function ServiceModal({ service, categories, onClose, onSave }) {
-  const [form, setForm] = useState(service ? { ...service } : emptyForm);
+  const [form, setForm] = useState(service ? { ...service, categories: service.categories || (service.category ? [service.category] : []) } : emptyForm);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-
-  // A native select visually shows its first option when its value is absent,
-  // but it does not change React form state. Keep the submitted category in
-  // sync with the active categories supplied by the API.
-  useEffect(() => {
-    if (service || !categories.length) return;
-    setForm((current) => (
-      categories.some((item) => item.name === current.category)
-        ? current
-        : { ...current, category: categories[0].name }
-    ));
-  }, [categories, service]);
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: "" }));
+  };
+
+  const toggleCategory = (name) => {
+    setForm((current) => ({
+      ...current,
+      categories: current.categories.includes(name)
+        ? current.categories.filter((item) => item !== name)
+        : [...current.categories, name],
+    }));
+    setErrors((current) => ({ ...current, categories: "" }));
   };
 
   async function submit(event) {
@@ -138,7 +136,18 @@ function ServiceModal({ service, categories, onClose, onSave }) {
         </div>
         <div className="form-grid">
           <label className={`full ${errors.title ? "has-error" : ""}`}>Service name<input value={form.title} onChange={(e) => update("title", e.target.value)} aria-invalid={Boolean(errors.title)} placeholder="e.g. Student Portal" />{errors.title && <small className="field-error">{errors.title}</small>}</label>
-          <label className={errors.category ? "has-error" : ""}>Category<select value={form.category} onChange={(e) => update("category", e.target.value)} aria-invalid={Boolean(errors.category)}>{categories.map((item) => <option value={item.name} key={item.id || item.name}>{item.name}</option>)}</select>{errors.category && <small className="field-error">{errors.category}</small>}</label>
+          <fieldset className={`full ${errors.categories ? "has-error" : ""}`}>
+            <legend>Categories (select one or more)</legend>
+            <div className="color-options">
+              {categories.map((item) => (
+                <label key={item.id || item.name} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 400 }}>
+                  <input type="checkbox" checked={form.categories.includes(item.name)} onChange={() => toggleCategory(item.name)} />
+                  {item.name}
+                </label>
+              ))}
+            </div>
+            {errors.categories && <small className="field-error">{errors.categories}</small>}
+          </fieldset>
           <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
           <label className={`full ${errors.url ? "has-error" : ""}`}>Website URL<input value={form.url === "#" ? "" : form.url} onChange={(e) => update("url", e.target.value)} type="text" aria-invalid={Boolean(errors.url)} placeholder="https://www.example.com" />{errors.url && <small className="field-error">{errors.url}</small>}</label>
           <label className={`full ${errors.description ? "has-error" : ""}`}>Description<textarea value={form.description} onChange={(e) => update("description", e.target.value)} aria-invalid={Boolean(errors.description)} rows="3" />{errors.description && <small className="field-error">{errors.description}</small>}</label>
@@ -154,10 +163,10 @@ function ServiceModal({ service, categories, onClose, onSave }) {
 
 function ServicesPanel({ services, query, category, onCategory, onEdit, onDelete, onStatus }) {
   const [showAll, setShowAll] = useState(false);
-  const categories = ["All", ...new Set(services.map((service) => service.category))];
+  const categories = ["All", ...new Set(services.flatMap((service) => service.categories || [service.category]))];
   const filtered = services.filter((service) =>
-    (category === "All" || service.category === category) &&
-    `${service.title} ${service.description} ${service.category}`.toLowerCase().includes(query.toLowerCase()),
+    (category === "All" || (service.categories || [service.category]).includes(category)) &&
+    `${service.title} ${service.description} ${(service.categories || [service.category]).join(" ")}`.toLowerCase().includes(query.toLowerCase()),
   );
   const shown = showAll ? filtered : filtered.slice(0, 6);
   return (
@@ -172,7 +181,7 @@ function ServicesPanel({ services, query, category, onCategory, onEdit, onDelete
           <tbody>{shown.map((service) => (
             <tr key={service.id}>
               <td><div className="service-cell"><span className="service-icon" style={{ "--service-color": palette[service.color] || palette.violet }}><Link2 /></span><span><strong>{service.title}</strong><small>{service.description}</small></span></div></td>
-              <td><span className="category-pill">{service.category}</span></td>
+              <td>{(service.categories || [service.category]).map((name) => <span className="category-pill" key={name} style={{ marginRight: "4px" }}>{name}</span>)}</td>
               <td><button className={`status-pill ${service.status}`} onClick={() => onStatus(service)}><i />{service.status === "active" ? "Active" : "Inactive"}</button></td>
               <td className="updated-cell">{new Date(service.updatedAt).toDateString() === new Date().toDateString() ? "Today" : new Date(service.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
               <td><div className="row-actions"><button onClick={() => onEdit(service)} aria-label={`Edit ${service.title}`}><Edit3 /></button><button className="delete" onClick={() => onDelete(service)} aria-label={`Delete ${service.title}`}><Trash2 /></button></div></td>
