@@ -83,8 +83,6 @@ function Home() {
   const [sites, setSites] = useState([]);
   const [recentSites, setRecentSites] = useState([]);
   const [categories, setCategories] = useState(["All"]);
-  const [groups, setGroups] = useState([]);
-  const [groupTabSelections, setGroupTabSelections] = useState({});
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [directoryOpen, setDirectoryOpen] = useState(false);
@@ -198,8 +196,7 @@ function Home() {
           tone: tonesByColor[system.color] || "purple",
           icon: iconsByCategory[system.category] || BookOpen,
         })));
-        setGroups(apiGroups);
-        // Extract all category names from groups for backward compatibility with filters
+        // Flatten every group's tabs into a single filter bar shown across the whole directory
         const allCategoryNames = new Set();
         apiGroups.forEach(g => {
           g.tabs?.forEach(t => allCategoryNames.add(t.name));
@@ -244,42 +241,6 @@ function Home() {
     });
   }, [sites, category, query]);
 
-  const groupedByTabStructure = useMemo(() => {
-    const normalizedQuery = query.toLowerCase().trim();
-    return groups.map((group) => {
-      // Get all sites in this group first
-      const allGroupSites = sites.filter((site) => {
-        const siteCategories = site.categories || [site.category];
-        const inGroup = siteCategories.includes(group.name) || (group.tabs && group.tabs.some((t) => siteCategories.includes(t.name)));
-        return inGroup && siteMatchesQuery(site, normalizedQuery);
-      });
-
-      if (group.tabs && group.tabs.length > 0) {
-        // Group with tabs: organize by tab
-        return {
-          ...group,
-          tabs: group.tabs.map((tab) => ({
-            ...tab,
-            sites: sites.filter((site) => (site.categories || [site.category]).includes(tab.name) && siteMatchesQuery(site, normalizedQuery)),
-          })).filter((tab) => tab.sites.length > 0),
-        };
-      } else {
-        // Group without tabs: show "All" and group name as tabs
-        const groupNameServices = sites.filter((site) => (site.categories || [site.category]).includes(group.name) && siteMatchesQuery(site, normalizedQuery));
-
-        return {
-          ...group,
-          tabs: allGroupSites.length > 0
-            ? [
-                { name: "All", id: `${group.id}-all`, sites: allGroupSites },
-                { name: group.name, id: `${group.id}-group`, sites: groupNameServices }
-              ]
-            : [],
-        };
-      }
-    }).filter((group) => group.tabs.length > 0);
-  }, [sites, groups, query]);
-
   const quickSites = useMemo(() => {
     const normalizedQuery = quickQuery.toLowerCase().trim();
     if (!normalizedQuery) return sites;
@@ -323,7 +284,7 @@ function Home() {
     );
     targets.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [groupedByTabStructure, filteredSites]);
+  }, [filteredSites]);
 
   const sidebarRecentSites = currentUser && recentSites.length ? recentSites : quickSites.slice(0, 3);
   const sidebarRecentTitle = currentUser && recentSites.length ? "Recently visited" : "Recently added";
@@ -556,45 +517,6 @@ function Home() {
                 aria-label="Search MCU services"
               />
             </label>
-          </div>
-
-          <div className="service-category-groups">
-            {groupedByTabStructure.map((group) => (
-              <section className="service-category-group" key={group.name} aria-label={`${group.name} services`}>
-                <h3 style={{ marginBottom: "16px", fontSize: "18px", fontWeight: "600" }}>{group.name}</h3>
-                {(() => {
-                  const activeTab = groupTabSelections[group.name] || "All";
-                  const matchingTabs = group.tabs.filter((tab) => activeTab === "All" || activeTab === tab.name);
-                  const uniqueSites = Array.from(
-                    new Map(matchingTabs.flatMap((tab) => tab.sites).map((site) => [site.id || site.title, site])).values()
-                  );
-                  return (
-                    <>
-                      <div className="directory-toolbar category-group-toolbar">
-                        {group.tabs && group.tabs.length > 0 && (
-                          <div className="filters" aria-label={`Filter ${group.name} services`}>
-                            <button className={activeTab === "All" ? "selected" : ""} onClick={() => setGroupTabSelections((current) => ({ ...current, [group.name]: "All" }))}>All</button>
-                            {group.tabs.filter(t => t.name !== "All").map((tab) => (
-                              <button
-                                key={tab.id}
-                                className={activeTab === tab.name ? "selected" : ""}
-                                onClick={() => setGroupTabSelections((current) => ({ ...current, [group.name]: tab.name }))}
-                              >
-                                {tab.name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <span className="result-count"><strong>{uniqueSites.length}</strong> connected services</span>
-                      </div>
-                      <div className="site-grid category-site-grid">
-                        {uniqueSites.map((site, index) => renderSiteCard(site, index))}
-                      </div>
-                    </>
-                  );
-                })()}
-              </section>
-            ))}
           </div>
 
           <div className="directory-toolbar global-directory-toolbar">
