@@ -771,32 +771,6 @@ a {
   gap: 20px;
 }
 
-.global-directory-toolbar,
-.global-site-grid {
-  display: none;
-}
-
-.service-category-groups {
-  display: grid;
-  gap: 36px;
-  margin-top: 34px;
-}
-
-.service-category-group {
-  min-width: 0;
-}
-
-.category-group-toolbar {
-  margin: 0 0 28px;
-}
-
-.category-group-toolbar .filters button:not(.selected) {
-  color: #64748b;
-}
-
-.category-site-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
 
 .site-card {
   position: relative;
