@@ -14,6 +14,15 @@ function linkErrors(body) {
   return [];
 }
 
+function displayOrderErrors(body) {
+  if (body.displayOrder === undefined || body.displayOrder === null || body.displayOrder === "") return [];
+  const parsed = Number(body.displayOrder);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return [{ field: "displayOrder", message: "Display order must be a number 0 or greater." }];
+  }
+  return [];
+}
+
 export const systemValidation = (body) => [
   ...(!isNonEmpty(body.title) ? [{ field: "title", message: "Service name is required." }] : []),
   ...(!categoriesOf(body).length ? [{ field: "categories", message: "Select at least one category." }] : []),
@@ -21,4 +30,5 @@ export const systemValidation = (body) => [
   ...(!isNonEmpty(body.url) ? [{ field: "url", message: "Website URL is required." }] : []),
   ...(isNonEmpty(body.url) && !isUrl(body.url) ? [{ field: "url", message: "URL must start with http:// or https://." }] : []),
   ...linkErrors(body),
+  ...displayOrderErrors(body),
 ];
