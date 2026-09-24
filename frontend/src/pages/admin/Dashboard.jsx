@@ -27,7 +27,7 @@ const linkIcons = [
 
 const emptyForm = {
   title: "", categories: [], status: "active", url: "",
-  description: "", color: "violet", links: [],
+  description: "", color: "violet", links: [], displayOrder: 0,
 };
 
 function initialsFor(user) {
@@ -108,7 +108,7 @@ function MetricCard({ tone, icon: Icon, label, value, children }) {
 }
 
 function ServiceModal({ service, categories, onClose, onSave }) {
-  const [form, setForm] = useState(service ? { ...service, categories: service.categories || (service.category ? [service.category] : []), links: service.links || [] } : emptyForm);
+  const [form, setForm] = useState(service ? { ...service, categories: service.categories || (service.category ? [service.category] : []), links: service.links || [], displayOrder: service.displayOrder ?? 0 } : emptyForm);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -180,6 +180,10 @@ function ServiceModal({ service, categories, onClose, onSave }) {
             {errors.categories && <small className="field-error">{errors.categories}</small>}
           </fieldset>
           <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+          <label className={errors.displayOrder ? "has-error" : ""}>Display order<input type="number" min="0" step="1" value={form.displayOrder} onChange={(e) => update("displayOrder", e.target.value)} aria-invalid={Boolean(errors.displayOrder)} placeholder="0" />
+            <small className="field-hint">Lower numbers show first on the homepage. Leave 0 for alphabetical order.</small>
+            {errors.displayOrder && <small className="field-error">{errors.displayOrder}</small>}
+          </label>
           <label className={`full ${errors.url ? "has-error" : ""}`}>Website URL<input value={form.url === "#" ? "" : form.url} onChange={(e) => update("url", e.target.value)} type="text" aria-invalid={Boolean(errors.url)} placeholder="https://www.example.com" />{errors.url && <small className="field-error">{errors.url}</small>}</label>
           <label className={`full ${errors.description ? "has-error" : ""}`}>Description<textarea value={form.description} onChange={(e) => update("description", e.target.value)} aria-invalid={Boolean(errors.description)} rows="3" />{errors.description && <small className="field-error">{errors.description}</small>}</label>
           <fieldset className="full"><legend>Accent color</legend><div className="color-options">
